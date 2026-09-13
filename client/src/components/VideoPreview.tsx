@@ -33,14 +33,20 @@ export function VideoPreview() {
     else v.pause();
   }, [togglePlayNonce]);
 
-  // Keep the preview scale in sync with the available width.
+  // Fit the video inside the available space: scale to whichever dimension
+  // is tighter, so tall (portrait) videos never overflow vertically.
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !videoMeta) return;
-    const ro = new ResizeObserver(() => {
+    const compute = () => {
       const w = el.clientWidth;
-      if (w > 0 && videoMeta.width > 0) setScale(w / videoMeta.width);
-    });
+      const h = el.clientHeight;
+      if (w > 0 && h > 0 && videoMeta.width > 0 && videoMeta.height > 0) {
+        setScale(Math.min(w / videoMeta.width, h / videoMeta.height));
+      }
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
   }, [videoMeta]);

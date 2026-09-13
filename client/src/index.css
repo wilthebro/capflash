@@ -43,6 +43,7 @@ body {
 .main {
   display: flex;
   min-height: 0;
+  overflow: hidden;
 }
 
 .preview-pane {
@@ -53,6 +54,7 @@ body {
   padding: 16px;
   background: #101114;
   min-width: 0;
+  overflow: hidden;
 }
 
 .side-pane {
@@ -347,8 +349,9 @@ input[type='color'] {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   height: 100%;
-  max-width: 100%;
+  overflow: hidden;
 }
 
 .preview-stage {
