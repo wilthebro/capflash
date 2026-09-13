@@ -1,6 +1,4 @@
-import { useMemo } from 'react';
-import { LINE_HEIGHT, wrapWords } from '@captioner/shared';
-import { measureText } from '../lib/measure';
+import { LINE_HEIGHT } from '@captioner/shared';
 import { useDragBox } from '../hooks/useDragBox';
 import { useSegmentLayouts } from '../hooks/useSegmentLayouts';
 import { useEditorStore } from '../store/editorStore';
@@ -14,11 +12,17 @@ import { useEditorStore } from '../store/editorStore';
 export function BoundingBox({ scale }: { scale: number }) {
   const selection = useEditorStore((s) => s.selection);
   const videoMeta = useEditorStore((s) => s.videoMeta);
-  const words = useEditorStore((s) => s.words);
   const segments = useEditorStore((s) => s.segments);
   const defaultBox = useEditorStore((s) => s.defaultBox);
   const defaultStyle = useEditorStore((s) => s.defaultStyle);
-  const fontsVersion = useEditorStore((s) => s.fontsVersion);
+  // The segment on screen right now, as an id: the box's height is the height
+  // of the captions actually being drawn — not of the whole transcript, which
+  // made it thousands of pixels tall. Returning an id (rather than the segment)
+  // keeps the per-frame playhead updates from re-rendering this component.
+  const activeSegmentId = useEditorStore((s) => {
+    const seg = s.segments.find((x) => x.start <= s.playhead && s.playhead < x.end);
+    return seg ? seg.id : null;
+  });
   const { layouts } = useSegmentLayouts();
   const drag = useDragBox();
 
@@ -26,21 +30,18 @@ export function BoundingBox({ scale }: { scale: number }) {
   const box = selected?.box ?? defaultBox;
   const style = selected?.style ?? defaultStyle;
 
-  const lineCount = useMemo(() => {
-    if (selected) return layouts.get(selected.id)?.lines.length ?? 1;
-    const { lines } = wrapWords(words, defaultBox.width, (t) =>
-      measureText(t, defaultStyle.fontFamily, defaultStyle.fontSize, defaultStyle.fontWeight),
-    );
-    return Math.max(1, lines.length);
-  }, [selected, layouts, words, defaultBox.width, defaultStyle, fontsVersion]);
-
   if (!videoMeta) return null;
+  const sizedTo = selected?.id ?? activeSegmentId;
+  const lineCount = (sizedTo ? layouts.get(sizedTo)?.lines.length : 0) || 1;
   const height = lineCount * style.fontSize * LINE_HEIGHT;
+  // While dragging, the box follows the pointer from local state; the store
+  // (and with it every caption) is only updated on release.
+  const shown = drag.liveBox ?? box;
 
   return (
     <div
       className={`bounding-box ${selected ? 'is-segment' : 'is-default'}`}
-      style={{ left: box.x, top: box.y, width: box.width, height }}
+      style={{ left: shown.x, top: shown.y, width: shown.width, height }}
       onPointerDown={(e) => drag.onPointerDown(e, 'move', scale)}
       onPointerMove={drag.onPointerMove}
       onPointerUp={drag.onPointerUp}

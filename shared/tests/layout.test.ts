@@ -80,4 +80,91 @@ describe('eventsForSegment clipping', () => {
     expect(events[0]!.start).toBe(0.2);
     expect(events[0]!.end).toBe(0.4);
   });
+
+  it('extends the last event to the segment end', () => {
+    // A trimmed/extended segment keeps its caption on screen to the end.
+    const seq = [word('w1', 'hi', 0, 0.3)];
+    const seg = { ...makeSeg(), start: 0, end: 1.5 };
+    const events = eventsForSegment(seg, resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX));
+    expect(events[0]!.end).toBe(1.5);
+  });
+});
+
+describe('eventsForSegment wrapped blocks', () => {
+  // "hello there" is 11 chars = 440px: wraps to two lines in a 400px box.
+  const seq = [word('w1', 'hello', 0, 0.5), word('w2', 'there', 0.5, 1)];
+  const box: Box = { x: 100, y: 1400, width: 400 };
+  const make = (mode: 'line' | 'highlight' | 'word', end = 1) => {
+    const seg: Segment = { ...makeSeg(box), id: 's1', mode, start: 0, end, wordIds: ['w1', 'w2'] };
+    const layout = resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX);
+    return { layout, events: eventsForSegment(seg, layout) };
+  };
+
+  it('shows the whole block for every word, anchored at the block top', () => {
+    const { layout, events } = make('line', 1);
+    expect(layout.lines).toHaveLength(2);
+    expect(events).toHaveLength(2);
+    for (const e of events) {
+      expect(e.text).toBe('hello\nthere');
+      expect(e.x).toBe(300); // shared box centerX, not a per-line center
+      expect(e.y).toBe(1400); // box.y — NOT the second line's topY
+      expect(e.words).toEqual([
+        { charStart: 0, charEnd: 5, highlighted: false },
+        { charStart: 6, charEnd: 11, highlighted: false }, // +1 for the '\n'
+      ]);
+    }
+    expect(layout.lines[1]!.topY).not.toBe(events[0]!.y);
+  });
+
+  it('flags only the spoken word, across both lines', () => {
+    const { events } = make('highlight', 1);
+    expect(events[0]!.words).toEqual([
+      { charStart: 0, charEnd: 5, highlighted: true },
+      { charStart: 6, charEnd: 11, highlighted: false },
+    ]);
+    expect(events[1]!.words).toEqual([
+      { charStart: 0, charEnd: 5, highlighted: false },
+      { charStart: 6, charEnd: 11, highlighted: true },
+    ]);
+  });
+
+  it('keeps word mode one word at a time at the word center', () => {
+    const { layout, events } = make('word', 1);
+    expect(events.map((e) => e.text)).toEqual(['hello', 'there']);
+    expect(events[0]!.x).toBe(layout.lines[0]!.words[0]!.centerX);
+    expect(events[0]!.y).toBe(1400);
+    expect(events[1]!.y).toBe(layout.lines[1]!.topY);
+  });
+});
+
+describe('eventsForSegment gap bridging', () => {
+  it('holds a word through the pause that follows it', () => {
+    const seq = [word('w1', 'yes', 0, 0.5), word('w2', 'sir', 1.0, 1.5)];
+    const seg: Segment = { ...makeSeg(), wordIds: ['w1', 'w2'], start: 0, end: 2 };
+    const events = eventsForSegment(seg, resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX));
+    expect(events.map((e) => [e.start, e.end])).toEqual([
+      [0, 1.0], // held across the 0.5s pause
+      [1.0, 2], // and the last one holds to the segment end
+    ]);
+  });
+
+  it('bridges in word mode too', () => {
+    const seq = [word('w1', 'yes', 0, 0.5), word('w2', 'sir', 1.0, 1.5)];
+    const seg: Segment = { ...makeSeg(), mode: 'word', wordIds: ['w1', 'w2'], start: 0, end: 2 };
+    const events = eventsForSegment(seg, resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX));
+    expect(events.map((e) => [e.start, e.end])).toEqual([
+      [0, 1.0],
+      [1.0, 2],
+    ]);
+  });
+
+  it('never shortens an overlapping event', () => {
+    const seq = [word('w1', 'yes', 0, 1.2), word('w2', 'sir', 1.0, 1.5)];
+    const seg: Segment = { ...makeSeg(), wordIds: ['w1', 'w2'], start: 0, end: 1.5 };
+    const events = eventsForSegment(seg, resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX));
+    expect(events.map((e) => [e.start, e.end])).toEqual([
+      [0, 1.2],
+      [1.0, 1.5],
+    ]);
+  });
 });

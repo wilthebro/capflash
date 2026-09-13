@@ -1,4 +1,4 @@
-import { highlightFontSize } from './style';
+import { highlightFontSize, LINE_HEIGHT } from './style';
 import type { DisplayEvent, RenderSpec, SegmentStyle } from './types';
 
 /** #RRGGBB -> &H00BBGGRR (ASS colors are little-endian BGR). */
@@ -41,30 +41,60 @@ export function assOutlineUnits(outlineWidthPx: number, playResY: number): numbe
 const round1 = (n: number): string => String(Math.round(n * 10) / 10);
 
 /**
- * Build the Text field for one event, inserting override tags at the flagged
- * spans. The spoken word in 'highlight' mode is recolored, forced bold and
- * enlarged — the same emphasis the preview overlay draws (\fs is absolute, so
- * the base size and weight are restored right after the span).
+ * Build the Text field for one event, breaking wrapped blocks into lines and
+ * inserting override tags at the flagged spans.
+ *
+ * Line/highlight events carry the segment's whole block, so its lines are
+ * split on '\n' and every line after the first is prefixed `\N{\pos(cx,y_i)\an8}`:
+ * the dialogue's own prefix anchors line 0, and each further line re-anchors
+ * itself at its line's top edge — the same pitch the overlay's line box uses
+ * (fontSize * LINE_HEIGHT). A later `\pos` simply moves the pen, so no repeated
+ * `\an8` would strictly be needed, but each line carries its own for clarity.
+ *
+ * The spoken word in 'highlight' mode is recolored, forced bold and enlarged —
+ * the same emphasis the preview overlay draws (\fs is absolute, so the base
+ * size and weight are restored right after the span).
  */
 function buildEventText(e: DisplayEvent): string {
-  const esc = escapeAssText(e.text);
-  if (e.mode !== 'highlight') return esc;
-  const hl = hexToAssBgr(e.style.highlightColor);
-  const base = hexToAssBgr(e.style.color);
-  const hlSize = highlightFontSize(e.style.fontSize);
-  const baseBold = e.style.fontWeight >= 700 ? 1 : 0;
+  const { style } = e;
+  const hl = hexToAssBgr(style.highlightColor);
+  const base = hexToAssBgr(style.color);
+  const hlSize = highlightFontSize(style.fontSize);
+  const baseBold = style.fontWeight >= 700 ? 1 : 0;
+  const isHighlight = e.mode === 'highlight';
+
   let out = '';
-  let pos = 0;
-  for (const w of e.words) {
-    out += esc.slice(pos, w.charStart);
-    if (w.highlighted) {
-      out += `{\\c${hl}\\b1\\fs${hlSize}}${esc.slice(w.charStart, w.charEnd)}{\\c${base}\\b${baseBold}\\fs${e.style.fontSize}}`;
-    } else {
-      out += esc.slice(w.charStart, w.charEnd);
+  let lineStart = 0;
+  e.text.split('\n').forEach((line, i) => {
+    if (i > 0) {
+      const y = e.y + i * style.fontSize * LINE_HEIGHT;
+      out += `\\N{\\pos(${round1(e.x)},${round1(y)})\\an8}`;
     }
-    pos = w.charEnd;
-  }
-  out += esc.slice(pos);
+    const esc = escapeAssText(line);
+    if (!isHighlight) {
+      out += esc;
+    } else {
+      // Spans were resolved against the whole block; wrapping never splits a
+      // word, so each lies within one line and is applied with the line's start
+      // subtracted. (Pre-existing quirk: they index the *escaped* line, so a
+      // word containing '{' or '\' shifts the spans after it on that line.)
+      let pos = 0;
+      for (const w of e.words) {
+        const start = Math.max(w.charStart - lineStart, 0);
+        const end = Math.min(w.charEnd - lineStart, line.length);
+        if (end <= start) continue; // belongs to another line
+        out += esc.slice(pos, start);
+        if (w.highlighted) {
+          out += `{\\c${hl}\\b1\\fs${hlSize}}${esc.slice(start, end)}{\\c${base}\\b${baseBold}\\fs${style.fontSize}}`;
+        } else {
+          out += esc.slice(start, end);
+        }
+        pos = end;
+      }
+      out += esc.slice(pos);
+    }
+    lineStart += line.length + 1; // +1 for the '\n' that followed it
+  });
   return out;
 }
 

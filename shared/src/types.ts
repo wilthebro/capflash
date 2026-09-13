@@ -98,6 +98,10 @@ export interface ExportSegment {
 /**
  * One unit of time-visible caption text. Drives BOTH the preview overlay and
  * the generated ASS file — this list is the preview/export parity guarantee.
+ *
+ * In line/highlight mode `text` is the segment's whole wrapped block, with its
+ * lines joined by '\n' (the overlay renders it with `white-space: pre-line`,
+ * the ASS generator breaks it with `\N`); the spans then index into that block.
  */
 export interface DisplayEvent {
   start: number;

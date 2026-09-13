@@ -8,7 +8,7 @@ import {
 } from '../src/ass';
 import { eventsForSegment, resolveSegmentLayout } from '../src/layout';
 import { DEFAULT_BOX } from '../src/style';
-import type { RenderSpec, Segment, SegmentStyle } from '../src/types';
+import type { ExportSegment, RenderSpec, Segment, SegmentStyle } from '../src/types';
 
 const styleA: SegmentStyle = {
   fontFamily: 'Arial',
@@ -168,5 +168,58 @@ Dialogue: 0,0:00:02.00,0:00:02.50,st1,,0,0,0,,{\\pos(250,0)\\an8}bye {\\c&H00FFF
       output: { videoCodec: 'libx264', crf: 18, preset: 'veryfast', audioCodec: 'aac', audioBitrate: '192k' },
     });
     expect(ass.split('\n').filter((l) => l.startsWith('Style:'))).toHaveLength(3);
+  });
+});
+
+describe('generateAss with a wrapped block', () => {
+  // "hello there" is 440px in a 400px box: two lines. The block sits at the box
+  // top; the second line re-anchors one line-height below it (64 * 1.2 = 76.8).
+  const seg = (mode: Segment['mode']): Segment => ({
+    id: 's1',
+    wordIds: ['w1', 'w2'],
+    start: 0,
+    end: 1,
+    mode,
+    style: styleA,
+    box: { x: 100, y: 1400, width: 400 },
+  });
+  const words = [
+    { id: 'w1', text: 'hello', start: 0, end: 0.5 },
+    { id: 'w2', text: 'there', start: 0.5, end: 1 },
+  ];
+  const dialoguesFor = (mode: Segment['mode']): string[] => {
+    const layout: ExportSegment = resolveSegmentLayout(
+      seg(mode),
+      words,
+      (t) => t.length * 40,
+      DEFAULT_BOX,
+    );
+    const spec: RenderSpec = {
+      version: 1,
+      renderer: 'ass',
+      video: { name: 't.mp4', duration: 1, width: 1080, height: 1920 },
+      segments: [layout],
+      fonts: [],
+      output: { videoCodec: 'libx264', crf: 18, preset: 'veryfast', audioCodec: 'aac', audioBitrate: '192k' },
+    };
+    return generateAss(spec).split('\n').filter((l) => l.startsWith('Dialogue:'));
+  };
+
+  it('breaks the block with \\N and re-positions each further line', () => {
+    expect(dialoguesFor('line')).toEqual([
+      'Dialogue: 0,0:00:00.00,0:00:00.50,st0,,0,0,0,,{\\pos(300,1400)\\an8}hello\\N{\\pos(300,1476.8)\\an8}there',
+      'Dialogue: 0,0:00:00.50,0:00:01.00,st0,,0,0,0,,{\\pos(300,1400)\\an8}hello\\N{\\pos(300,1476.8)\\an8}there',
+    ]);
+  });
+
+  it('applies the emphasis inside the line the spoken word is on', () => {
+    const dialogues = dialoguesFor('highlight');
+    // Word 1 is on the first line, word 2 on the second.
+    expect(dialogues[0]).toBe(
+      'Dialogue: 0,0:00:00.00,0:00:00.50,st0,,0,0,0,,{\\pos(300,1400)\\an8}{\\c&H0000D4FF\\b1\\fs70}hello{\\c&H00FFFFFF\\b1\\fs64}\\N{\\pos(300,1476.8)\\an8}there',
+    );
+    expect(dialogues[1]).toBe(
+      'Dialogue: 0,0:00:00.50,0:00:01.00,st0,,0,0,0,,{\\pos(300,1400)\\an8}hello\\N{\\pos(300,1476.8)\\an8}{\\c&H0000D4FF\\b1\\fs70}there{\\c&H00FFFFFF\\b1\\fs64}',
+    );
   });
 });

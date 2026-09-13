@@ -271,6 +271,9 @@ async function main(): Promise<void> {
     const checks = [
       ['word event', dialogues.some((l) => l.includes('\\pos') && l.endsWith('Hello'))],
       ['highlight color tag', dialogues.some((l) => l.includes('\\c&H0000D4FF'))],
+      // s-highlight wraps to two lines, so its dialogues carry the block's
+      // second line, hard-broken and re-positioned.
+      ['wrapped block broken with \\N and re-\\pos', dialogues.some((l) => l.includes('\\N{\\pos'))],
       ['highlight bold+size tags', dialogues.some((l) => /\\b1\\fs\d+/.test(l) && /\\b0\\fs\d+/.test(l))],
       ['outline units', ass.includes('Outline')],
       ['styles', ass.includes('Style: st0')],

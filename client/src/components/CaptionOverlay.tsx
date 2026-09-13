@@ -13,8 +13,12 @@ export function CaptionOverlay() {
   if (!videoMeta || activeEvents.length === 0) return null;
   return (
     <div className="caption-overlay" style={{ width: videoMeta.width, height: videoMeta.height }}>
+      {/* Keyed by slot, not by time: a time-bearing key remounted the div on
+          every word transition, recreating its text-stroke paint layers and
+          making the caption flicker. The views are stateless, so patching in
+          place is enough. */}
       {activeEvents.map((e, i) => (
-        <CaptionEventView key={`${i}-${e.start}`} event={e} />
+        <CaptionEventView key={i} event={e} />
       ))}
     </div>
   );
@@ -41,7 +45,12 @@ function CaptionEventView({ event }: { event: DisplayEvent }) {
         // looks. Browsers that don't implement paint-order for text fall back to
         // the usual centred stroke.
         paintOrder: outline ? 'stroke fill' : undefined,
-        lineHeight: LINE_HEIGHT,
+        // An absolute line box, not a multiplier: every line is then exactly
+        // fontSize * LINE_HEIGHT tall whatever it contains, which is the pitch
+        // the ASS generator positions each line at. A unitless line-height
+        // would instead scale with the enlarged highlight word and push the
+        // lines below it down for as long as that word is highlighted.
+        lineHeight: `${style.fontSize * LINE_HEIGHT}px`,
         textAlign: 'center',
       }}
     >
@@ -67,6 +76,10 @@ function HighlightedText({ event }: { event: DisplayEvent }) {
                 // ~10% larger, so the spoken word is unmistakable at a glance.
                 fontWeight: highlightFontWeight(event.style.fontWeight),
                 fontSize: highlightFontSize(event.style.fontSize),
+                // Let the bigger word overflow its line box rather than grow
+                // it: the lines' pitch stays put and the word grows about the
+                // baseline, which is what libass does with a larger \fs.
+                lineHeight: 0,
               }
             : undefined
         }

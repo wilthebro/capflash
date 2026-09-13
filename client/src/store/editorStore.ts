@@ -21,6 +21,14 @@ import { readVideoMeta } from '../lib/video';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+/**
+ * One word is one token: strip surrounding whitespace and collapse any run of
+ * inner whitespace to a single space. Transcripts and hand-edited project files
+ * can carry newlines or tabs inside a word, and a '\n' would read as a line
+ * break in the wrapped caption block.
+ */
+const normalizeWordText = (t: string) => t.replace(/\s+/g, ' ').trim();
+
 export interface ScriptImportResult {
   warnings: string[];
   stats: { matched: number; unmatchedTranscript: number; unmatchedScript: number };
@@ -146,7 +154,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         dropped++;
         continue;
       }
-      words.push({ id: w.id, text: w.text.trim(), start: w.start, end: w.end });
+      words.push({ id: w.id, text: normalizeWordText(w.text), start: w.start, end: w.end });
     }
     if (dropped > 0) warnings.push(`${dropped} word(s) skipped (end <= start).`);
     words.sort((a, b) => a.start - b.start);
@@ -159,7 +167,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   applyTranscriptEdit: (nextWords) => {
     const { segments, defaultStyle, defaultMode } = get();
     const words = [...nextWords]
-      .map((w) => ({ ...w, text: w.text.trim() }))
+      .map((w) => ({ ...w, text: normalizeWordText(w.text) }))
       .sort((a, b) => a.start - b.start);
     const { segments: nextSegments, droppedEmpty } = reassignSegments(segments, words, {
       style: defaultStyle,
@@ -327,7 +335,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       videoFile: null,
       videoUrl: null,
       videoMeta: p.video,
-      words: p.words,
+      words: p.words.map((w) => ({ ...w, text: normalizeWordText(w.text) })),
       segments: p.segments,
       defaultStyle: p.defaultStyle,
       defaultBox: p.defaultBox,

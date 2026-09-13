@@ -56,9 +56,16 @@ export function resolveSegmentLayout(
  * overlay and the ASS generator render from this event list.
  *
  * - word mode: one event per word at the word's center.
- * - line mode: one event per word showing the whole line at the line's center.
+ * - line mode: one event per word showing the segment's WHOLE wrapped block
+ *   (its lines joined with '\n') anchored at the block's top edge.
  * - highlight mode: like line mode, but the spoken word's [charStart, charEnd)
  *   span is flagged `highlighted`.
+ *
+ * Line/highlight show the whole block for every word rather than just the
+ * current word's own line: the text then never changes shape or moves mid
+ * segment — only the highlight travels — which is what stops wrapped captions
+ * jumping as playback crosses a line break.
+ *
  * All events are clipped to [seg.start, seg.end]; fully clipped words drop out.
  */
 export function eventsForSegment(
@@ -67,7 +74,28 @@ export function eventsForSegment(
 ): DisplayEvent[] {
   const { mode, style, lines } = layout;
   const events: DisplayEvent[] = [];
+
+  // Every line shares the box's centerX, so the block anchors like a single
+  // line: top-center at the first line's position (== box.y).
+  const blockX = lines[0]?.centerX ?? 0;
+  const blockY = lines[0]?.topY ?? 0;
+  const blockText = lines.map((l) => l.text).join('\n');
+  // Where each line starts in blockText, so per-word spans stay valid there.
+  const lineBase: number[] = [];
+  let base = 0;
   for (const line of lines) {
+    lineBase.push(base);
+    base += line.text.length + 1; // +1 for the joining '\n'
+  }
+  const spans = lines.flatMap((line, i) =>
+    line.words.map((lw) => ({
+      charStart: lw.charStart + lineBase[i]!,
+      charEnd: lw.charEnd + lineBase[i]!,
+      word: lw,
+    })),
+  );
+
+  lines.forEach((line) => {
     for (const w of line.words) {
       const start = Math.max(w.start, seg.start);
       const end = Math.min(w.end, seg.end);
@@ -88,21 +116,35 @@ export function eventsForSegment(
         events.push({
           start,
           end,
-          text: line.text,
-          x: line.centerX,
-          y: line.topY,
-          words: line.words.map((lw) => ({
-            charStart: lw.charStart,
-            charEnd: lw.charEnd,
-            highlighted: isHighlight && lw === w,
+          text: blockText,
+          x: blockX,
+          y: blockY,
+          words: spans.map((s) => ({
+            charStart: s.charStart,
+            charEnd: s.charEnd,
+            highlighted: isHighlight && s.word === w,
           })),
           style,
           mode,
         });
       }
     }
+  });
+
+  events.sort((a, b) => a.start - b.start);
+
+  // Hold each event on screen through the pause that follows it (commas,
+  // breaths) instead of blanking between words — a gap with no active event
+  // reads as a flicker. The last event holds until the segment ends, so a
+  // trimmed segment's tail stays captioned. Ends are only ever extended.
+  for (let i = 0; i < events.length - 1; i++) {
+    const cur = events[i]!;
+    const next = events[i + 1]!;
+    if (cur.end < next.start) cur.end = next.start;
   }
-  return events.sort((a, b) => a.start - b.start);
+  const last = events[events.length - 1];
+  if (last && last.end < seg.end) last.end = seg.end;
+  return events;
 }
 
 /** Line count for a box with the given style (used to draw the box's height). */
