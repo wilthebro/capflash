@@ -3,6 +3,7 @@ import {
   DEFAULT_BOX,
   DEFAULT_STYLE,
   defaultId,
+  reassignSegments,
   segmentsFromScript,
   splitTranscript,
   TranscriptSchema,
@@ -46,10 +47,16 @@ interface EditorState {
   activeEvents: DisplayEvent[];
   projectName: string;
   notices: string[];
+  scriptText: string;
 
   loadVideo(file: File): Promise<void>;
   loadTranscript(raw: unknown): string[];
+  /** Replace the transcript wholesale (Whisper results, JSON import). */
+  commitTranscript(words: Word[]): string[];
+  /** Re-derive segments after the transcript editor changed words. */
+  applyTranscriptEdit(nextWords: Word[]): string[];
   importScript(scriptText: string): ScriptImportResult;
+  setScriptText(text: string): void;
   updateSegment(id: string, patch: Partial<Pick<Segment, 'mode' | 'style' | 'box'>>): void;
   moveSegment(id: string, deltaSec: number): void;
   resizeSegment(id: string, edge: 'start' | 'end', t: number): void;
@@ -96,6 +103,7 @@ const initialData = {
   activeEvents: [] as DisplayEvent[],
   projectName: 'Untitled',
   notices: [] as string[],
+  scriptText: '',
 };
 
 export const useEditorStore = create<EditorState>()((set, get) => ({
@@ -124,26 +132,49 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
           parsed.error.issues.slice(0, 3).map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
       );
     }
+    return get().commitTranscript(
+      parsed.data.map((w) => ({ id: defaultId(), text: w.text, start: w.start, end: w.end })),
+    );
+  },
+
+  commitTranscript: (input) => {
     const warnings: string[] = [];
     const words: Word[] = [];
     let dropped = 0;
-    for (const w of parsed.data) {
+    for (const w of input) {
       if (w.end <= w.start) {
         dropped++;
         continue;
       }
-      words.push({ id: defaultId(), text: w.text.trim(), start: w.start, end: w.end });
+      words.push({ id: w.id, text: w.text.trim(), start: w.start, end: w.end });
     }
     if (dropped > 0) warnings.push(`${dropped} word(s) skipped (end <= start).`);
     words.sort((a, b) => a.start - b.start);
-    const { defaultStyle, defaultBox, defaultMode } = get();
-    const segments = splitTranscript(words, { style: defaultStyle, box: defaultBox, mode: defaultMode });
+    const { defaultStyle, defaultMode } = get();
+    const segments = splitTranscript(words, { style: defaultStyle, mode: defaultMode });
     set({ words, segments, selection: [], playhead: 0 });
     return warnings;
   },
 
+  applyTranscriptEdit: (nextWords) => {
+    const { segments, defaultStyle, defaultMode } = get();
+    const words = [...nextWords]
+      .map((w) => ({ ...w, text: w.text.trim() }))
+      .sort((a, b) => a.start - b.start);
+    const { segments: nextSegments, droppedEmpty } = reassignSegments(segments, words, {
+      style: defaultStyle,
+      mode: defaultMode,
+    });
+    const warnings: string[] = [];
+    if (droppedEmpty > 0) warnings.push(`${droppedEmpty} segment(s) became empty and were removed.`);
+    set({ words, segments: nextSegments, selection: [] });
+    return warnings;
+  },
+
+  setScriptText: (text) => set({ scriptText: text }),
+
   importScript: (scriptText) => {
-    const { words, defaultStyle, defaultBox, defaultMode } = get();
+    const { words, defaultStyle, defaultMode } = get();
     if (words.length === 0) {
       return {
         warnings: ['Load a transcript first — word timestamps come from the word-level JSON.'],
@@ -152,7 +183,6 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     }
     const { segments, warnings, stats } = segmentsFromScript(words, scriptText, {
       style: defaultStyle,
-      box: defaultBox,
       mode: defaultMode,
     });
     set({ segments, selection: [] });
@@ -217,7 +247,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         end: Math.max(...segs.map((x) => x.end)),
         mode: first.mode,
         style: { ...first.style },
-        box: { ...first.box },
+        // Keep the mergee's own box only if it had one; otherwise stay linked.
+        ...(first.box ? { box: { ...first.box } } : {}),
       };
       const keep = s.segments.filter((x) => !ids.includes(x.id));
       keep.push(merged);
@@ -226,10 +257,17 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     }),
 
   deleteSegments: (ids) =>
-    set((s) => ({
-      segments: s.segments.filter((x) => !ids.includes(x.id)),
-      selection: s.selection.filter((id) => !ids.includes(id)),
-    })),
+    set((s) => {
+      const doomed = s.segments.filter((x) => ids.includes(x.id));
+      const droppedWordIds = new Set(doomed.flatMap((x) => x.wordIds));
+      return {
+        segments: s.segments.filter((x) => !ids.includes(x.id)),
+        // The caption and its words go together; orphaned words would keep
+        // reappearing in the transcript editor with no way to reach them.
+        words: s.words.filter((w) => !droppedWordIds.has(w.id)),
+        selection: s.selection.filter((id) => !ids.includes(id)),
+      };
+    }),
 
   updateDefaultStyle: (patch) => set((s) => ({ defaultStyle: { ...s.defaultStyle, ...patch } })),
   updateDefaultBox: (patch) => set((s) => ({ defaultBox: { ...s.defaultBox, ...patch } })),
@@ -241,7 +279,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         ...seg,
         mode: s.defaultMode,
         style: { ...s.defaultStyle },
-        box: { ...s.defaultBox },
+        // Drop per-segment boxes so every caption follows the global box again,
+        // and resetting to defaults can't strand captions at a stale position.
+        box: undefined,
       })),
     })),
 

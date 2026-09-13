@@ -7,8 +7,9 @@ import { useEditorStore } from '../store/editorStore';
 
 /**
  * Dashed box over the preview showing where captions sit. Drag the body to
- * move, the right-edge handle to resize. Edits the selected segment's box,
- * or the default box when nothing is selected.
+ * move, the right-edge handle to resize. With nothing selected the box *is*
+ * the global default, so dragging moves every caption that follows it; with a
+ * segment selected, dragging pins that one segment's own box.
  */
 export function BoundingBox({ scale }: { scale: number }) {
   const selection = useEditorStore((s) => s.selection);
@@ -28,7 +29,7 @@ export function BoundingBox({ scale }: { scale: number }) {
   const lineCount = useMemo(() => {
     if (selected) return layouts.get(selected.id)?.lines.length ?? 1;
     const { lines } = wrapWords(words, defaultBox.width, (t) =>
-      measureText(t, defaultStyle.fontFamily, defaultStyle.fontSize),
+      measureText(t, defaultStyle.fontFamily, defaultStyle.fontSize, defaultStyle.fontWeight),
     );
     return Math.max(1, lines.length);
   }, [selected, layouts, words, defaultBox.width, defaultStyle, fontsVersion]);
@@ -44,7 +45,10 @@ export function BoundingBox({ scale }: { scale: number }) {
       onPointerMove={drag.onPointerMove}
       onPointerUp={drag.onPointerUp}
     >
-      <span className="bounding-box-label">{selected ? 'segment' : 'default'}</span>
+      <span className="bounding-box-label">
+        {/* A selected segment without its own box still sits on the global one. */}
+        {selected?.box ? 'segment' : 'default'}
+      </span>
       <div
         className="bounding-box-handle"
         onPointerDown={(e) => drag.onPointerDown(e, 'resize', scale)}

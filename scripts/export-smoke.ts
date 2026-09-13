@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import {
+  DEFAULT_BOX,
   resolveSegmentLayout,
   type RenderSpec,
   type Segment,
@@ -22,12 +23,15 @@ const TEST_ASSETS = path.join(ROOT, 'test-assets');
 // Set SMOKE_VIDEO to run the same spec against another file (e.g. a no-audio copy).
 const VIDEO_PATH = process.env.SMOKE_VIDEO ?? path.join(TEST_ASSETS, 'input.mp4');
 const FONT_PATH = path.join(TEST_ASSETS, 'BebasNeue-Regular.ttf');
+const BUNDLED_FONTS_DIR = path.join(ROOT, 'client', 'src', 'assets', 'fonts');
 const OUT_DIR = path.join(TEST_ASSETS, 'output');
 const SERVER = process.env.CAPTIONER_SERVER ?? 'http://localhost:3001';
 
+// Weight 700 => the ASS Style line must carry Bold -1.
 const STYLE_A: SegmentStyle = {
   fontFamily: 'Arial',
   fontSize: 64,
+  fontWeight: 700,
   color: '#FFFFFF',
   outlineColor: '#000000',
   outlineWidth: 4,
@@ -36,6 +40,7 @@ const STYLE_A: SegmentStyle = {
 const STYLE_B: SegmentStyle = {
   fontFamily: 'Arial',
   fontSize: 56,
+  fontWeight: 400,
   color: '#FFFFFF',
   outlineColor: '#000000',
   outlineWidth: 6,
@@ -44,6 +49,19 @@ const STYLE_B: SegmentStyle = {
 const STYLE_CUSTOM: SegmentStyle = {
   fontFamily: 'Bebas Neue',
   fontSize: 64,
+  fontWeight: 400,
+  color: '#FFFFFF',
+  outlineColor: '#000000',
+  outlineWidth: 4,
+  highlightColor: '#FFD400',
+};
+// The shipped default: bundled Montserrat at Heavy (800). Verifies end to end
+// that the patched ExtraBold actually matches `Fontname: Montserrat` in libass
+// — the stock file calls itself "Montserrat ExtraBold", a separate family.
+const STYLE_BUNDLED: SegmentStyle = {
+  fontFamily: 'Montserrat',
+  fontSize: 64,
+  fontWeight: 800,
   color: '#FFFFFF',
   outlineColor: '#000000',
   outlineWidth: 4,
@@ -80,7 +98,7 @@ const words: Word[] = RAW.map(([text, start], i) => ({
 
 const measure = (t: string, style: SegmentStyle) => t.length * style.fontSize * 0.55;
 
-function makeSegment(id: string, idx: [number, number], mode: Segment['mode'], style: SegmentStyle, box: Segment['box']): Segment {
+function makeSegment(id: string, idx: [number, number], mode: Segment['mode'], style: SegmentStyle, box?: Segment['box']): Segment {
   const ids = words.slice(idx[0], idx[1] + 1).map((w) => w.id);
   const ws = words.slice(idx[0], idx[1] + 1);
   return {
@@ -109,6 +127,22 @@ async function buildSpec(): Promise<RenderSpec> {
   } catch {
     console.log('⚠ BebasNeue-Regular.ttf not found in test-assets — skipping custom-font segment');
   }
+  // Bundled-font gate: the shipped Montserrat pair at the top of the frame.
+  // `s-linked` has no box, so it also exercises the default-box fallback.
+  try {
+    const [regular, extraBold] = await Promise.all([
+      fs.readFile(path.join(BUNDLED_FONTS_DIR, 'Montserrat-Regular.ttf')),
+      fs.readFile(path.join(BUNDLED_FONTS_DIR, 'Montserrat-ExtraBold.ttf')),
+    ]);
+    fonts.push(
+      { family: 'Montserrat', fileName: 'Montserrat-Regular.ttf', dataBase64: regular.toString('base64') },
+      { family: 'Montserrat', fileName: 'Montserrat-ExtraBold.ttf', dataBase64: extraBold.toString('base64') },
+    );
+    segs.push(makeSegment('s-bundled', [0, 3], 'line', STYLE_BUNDLED, { x: 100, y: 100, width: 800 }));
+    segs.push(makeSegment('s-linked', [4, 7], 'line', STYLE_BUNDLED));
+  } catch {
+    console.log('⚠ bundled Montserrat fonts not found — skipping bundled-font segments');
+  }
   return {
     version: 1,
     renderer: 'ass',
@@ -118,6 +152,7 @@ async function buildSpec(): Promise<RenderSpec> {
         seg,
         seg.wordIds.map((id) => words.find((w) => w.id === id)!),
         (t) => measure(t, seg.style),
+        DEFAULT_BOX,
       ),
     ),
     fonts,
@@ -175,8 +210,9 @@ async function main(): Promise<void> {
   await ensureAssets();
 
   const spec = await buildSpec();
+  const families = [...new Set(spec.fonts.map((f) => f.family))];
   console.log(
-    `spec: ${spec.segments.length} segments (word, highlight, line${spec.fonts.length ? ', custom-font' : ''}), ${spec.video.width}x${spec.video.height}`,
+    `spec: ${spec.segments.length} segments, ${spec.video.width}x${spec.video.height}, embedded fonts: ${families.join(', ') || 'none'}`,
   );
 
   console.log('POST /api/render …');
@@ -211,7 +247,8 @@ async function main(): Promise<void> {
   if (srcHasAudio && !probe.includes('codec_type=audio')) throw new Error('audio stream lost in output');
   if (!srcHasAudio && probe.includes('codec_type=audio')) throw new Error('unexpected audio stream in output');
 
-  // extract spot-check frames (word mode ~0.4s, highlight ~4.0s, line + custom font ~6.4s)
+  // Spot-check frames: word mode ~0.4s (also shows the bundled Montserrat line
+  // at the top of the frame), highlight ~4.0s, line + custom font ~6.4s.
   for (const [t, name] of [[0.4, 'frame-word'], [4.0, 'frame-highlight'], [6.4, 'frame-line']] as const) {
     const p = path.join(OUT_DIR, `${name}.png`);
     await run('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', String(t), '-i', outPath, '-frames:v', '1', p]);
@@ -223,12 +260,29 @@ async function main(): Promise<void> {
     const assPath = path.join(ROOT, 'server', 'data', 'jobs', id, 'captions.ass');
     const ass = await fs.readFile(assPath, 'utf8');
     const dialogues = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
-    console.log(`ASS: ${dialogues.length} dialogue lines`);
+    const styleLines = ass.split('\n').filter((l) => l.startsWith('Style:'));
+    console.log(`ASS: ${dialogues.length} dialogue lines, ${styleLines.length} styles`);
+    // Column order: Name, Fontname, Fontsize, Primary, Secondary, Outline, Back, Bold, …
+    // Found by face rather than by style name: style names follow first-event
+    // order, which shifts as the spec gains segments.
+    const boldOf = (fontname: string, fontsize: number) =>
+      styleLines.find((l) => l.split(',')[1] === fontname && l.split(',')[2] === String(fontsize))?.split(',')[7];
+    const montserrat = styleLines.filter((l) => l.split(',')[1] === 'Montserrat');
     const checks = [
       ['word event', dialogues.some((l) => l.includes('\\pos') && l.endsWith('Hello'))],
-      ['highlight tag', dialogues.some((l) => l.includes('\\c&H0000D4FF'))],
+      ['highlight color tag', dialogues.some((l) => l.includes('\\c&H0000D4FF'))],
+      ['highlight bold+size tags', dialogues.some((l) => /\\b1\\fs\d+/.test(l) && /\\b0\\fs\d+/.test(l))],
       ['outline units', ass.includes('Outline')],
       ['styles', ass.includes('Style: st0')],
+      ['Bold column -1 for the 700-weight style', boldOf('Arial', 64) === '-1'],
+      ['Bold column 0 for the 400-weight style', boldOf('Arial', 56) === '0'],
+      ...(montserrat.length > 0
+        ? ([
+            ['bundled Montserrat resolves as one family', true],
+            ['bundled Montserrat is bold', montserrat.every((l) => l.split(',')[7] === '-1')],
+          ] as const)
+        : []),
+      ['a box-less segment falls back to the default box', dialogues.some((l) => l.includes(`\\pos(540,${DEFAULT_BOX.y})`))],
     ] as const;
     for (const [name, ok] of checks) console.log(`${ok ? '✓' : '✗ MISSING'} ${name}`);
     if (checks.some(([, ok]) => !ok)) throw new Error('ASS spot checks failed');

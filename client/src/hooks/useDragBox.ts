@@ -16,9 +16,12 @@ const MIN_WIDTH = 40;
 
 /**
  * Pointer drag for the bounding box on the preview: moves x/y or resizes
- * width. Writes to the selected segment's box, or the default box when
- * nothing is selected. Deltas are divided by the preview scale so the
- * stored values stay in video px.
+ * width. Deltas are divided by the preview scale so the stored values stay in
+ * video px.
+ *
+ * Dragging with nothing selected moves the global box (every caption linked to
+ * it follows). Dragging a selected segment gives that segment its own box —
+ * which is also what un-links it, so a drag always means "pin this one here".
  */
 export function useDragBox() {
   const drag = useRef<DragState | null>(null);
@@ -28,7 +31,7 @@ export function useDragBox() {
     const s = useEditorStore.getState();
     const seg =
       s.selection.length === 1 ? s.segments.find((x) => x.id === s.selection[0]) : undefined;
-    const origBox = seg ? seg.box : s.defaultBox;
+    const origBox = seg?.box ?? s.defaultBox;
     drag.current = { mode, startX: e.clientX, startY: e.clientY, origBox: { ...origBox }, segmentId: seg?.id ?? null, scale };
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);

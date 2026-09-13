@@ -1,3 +1,4 @@
+import { highlightFontSize } from './style';
 import type { DisplayEvent, RenderSpec, SegmentStyle } from './types';
 
 /** #RRGGBB -> &H00BBGGRR (ASS colors are little-endian BGR). */
@@ -39,18 +40,25 @@ export function assOutlineUnits(outlineWidthPx: number, playResY: number): numbe
 
 const round1 = (n: number): string => String(Math.round(n * 10) / 10);
 
-/** Build the Text field for one event, inserting highlight color override tags at the flagged spans. */
+/**
+ * Build the Text field for one event, inserting override tags at the flagged
+ * spans. The spoken word in 'highlight' mode is recolored, forced bold and
+ * enlarged — the same emphasis the preview overlay draws (\fs is absolute, so
+ * the base size and weight are restored right after the span).
+ */
 function buildEventText(e: DisplayEvent): string {
   const esc = escapeAssText(e.text);
   if (e.mode !== 'highlight') return esc;
   const hl = hexToAssBgr(e.style.highlightColor);
   const base = hexToAssBgr(e.style.color);
+  const hlSize = highlightFontSize(e.style.fontSize);
+  const baseBold = e.style.fontWeight >= 700 ? 1 : 0;
   let out = '';
   let pos = 0;
   for (const w of e.words) {
     out += esc.slice(pos, w.charStart);
     if (w.highlighted) {
-      out += `{\\c${hl}}${esc.slice(w.charStart, w.charEnd)}{\\c${base}}`;
+      out += `{\\c${hl}\\b1\\fs${hlSize}}${esc.slice(w.charStart, w.charEnd)}{\\c${base}\\b${baseBold}\\fs${e.style.fontSize}}`;
     } else {
       out += esc.slice(w.charStart, w.charEnd);
     }
@@ -84,7 +92,7 @@ export function generateAss(spec: RenderSpec): string {
   const styles = new Map<string, { name: string; style: SegmentStyle }>();
   let styleCounter = 0;
   const styleKey = (st: SegmentStyle) =>
-    `${st.fontFamily}|${st.fontSize}|${st.color}|${st.outlineColor}|${st.outlineWidth}`;
+    `${st.fontFamily}|${st.fontSize}|${st.fontWeight}|${st.color}|${st.outlineColor}|${st.outlineWidth}|${st.highlightColor}`;
   const styleNameOf = (st: SegmentStyle): string => {
     const key = styleKey(st);
     let entry = styles.get(key);
@@ -106,7 +114,7 @@ export function generateAss(spec: RenderSpec): string {
     out.push(
       `Style: ${name},${st.fontFamily},${st.fontSize},${hexToAssBgr(st.color)},${hexToAssBgr(
         st.highlightColor,
-      )},${hexToAssBgr(st.outlineColor)},&H80000000,0,0,0,0,100,100,0,0,1,${assOutlineUnits(
+      )},${hexToAssBgr(st.outlineColor)},&H80000000,${st.fontWeight >= 700 ? -1 : 0},0,0,0,100,100,0,0,1,${assOutlineUnits(
         st.outlineWidth,
         video.height,
       )},0,8,0,0,0,1`,

@@ -6,6 +6,7 @@ import {
 } from '@captioner/shared';
 import { measureText } from './measure';
 import { registerFontRecord } from './fonts';
+import { bundledFontRecords } from './bundledFonts';
 import { useEditorStore } from '../store/editorStore';
 
 export async function saveProjectToFile(): Promise<void> {
@@ -43,7 +44,7 @@ export async function loadProjectFromFile(file: File): Promise<string[]> {
  * Resolve the current editor state into a render spec. Same geometry pipeline
  * as the preview (resolveSegmentLayout + eventsForSegment with canvas
  * measureText) — the server performs no text measurement of its own.
- * Call only after `document.fonts.ready`.
+ * Call only after `document.fonts.ready` *and* `bundledFontsReady()`.
  */
 export function buildRenderSpec(): RenderSpec {
   const s = useEditorStore.getState();
@@ -53,15 +54,22 @@ export function buildRenderSpec(): RenderSpec {
     const segWords = seg.wordIds
       .map((id) => wordMap.get(id))
       .filter((w): w is Word => w !== undefined);
-    const measure = (t: string) => measureText(t, seg.style.fontFamily, seg.style.fontSize);
-    return resolveSegmentLayout(seg, segWords, measure);
+    const measure = (t: string) =>
+      measureText(t, seg.style.fontFamily, seg.style.fontSize, seg.style.fontWeight);
+    return resolveSegmentLayout(seg, segWords, measure, s.defaultBox);
   });
   return {
     version: 1,
     renderer: 'ass',
     video: s.videoMeta,
     segments,
-    fonts: s.fonts,
+    // The bundled faces ride along so libass can resolve the default family.
+    // They are never written into project files — only into the render spec —
+    // and a font the user uploaded themselves wins for its family.
+    fonts: [
+      ...s.fonts,
+      ...bundledFontRecords().filter((b) => !s.fonts.some((f) => f.family === b.family)),
+    ],
     output: {
       videoCodec: 'libx264',
       crf: 18,

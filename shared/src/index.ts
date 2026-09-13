@@ -4,5 +4,7 @@ export * from './wrapping';
 export * from './layout';
 export * from './segmentation';
 export * from './alignment';
+export * from './whisper';
+export * from './reassign';
 export * from './ass';
 export * from './validate';

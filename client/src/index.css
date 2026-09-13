@@ -215,6 +215,14 @@ input[type='color'] {
   color: var(--text-dim);
 }
 
+.panel-subtitle {
+  margin: 14px 0 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
 .panel-hint {
   font-size: 12px;
   color: var(--text-dim);
@@ -749,4 +757,93 @@ input[type='color'] {
 
 .download-button {
   text-decoration: none;
+}
+
+/* ---------- whisper ---------- */
+
+.transcribe-capability {
+  margin-bottom: 12px;
+}
+
+.transcribe-note {
+  display: block;
+  color: #f5b942;
+}
+
+.transcribe-preview {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 140px;
+  overflow: auto;
+  margin: 0 0 10px;
+  color: var(--text-dim);
+}
+
+/* ---------- transcript editor ---------- */
+
+.modal.wide {
+  width: 680px;
+}
+
+.transcript-table-wrap {
+  max-height: 46vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+}
+
+.transcript-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.transcript-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-panel-2);
+  color: var(--text-dim);
+  font-weight: 500;
+  text-align: left;
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.transcript-table td {
+  padding: 2px 6px;
+  border-top: 1px solid var(--border);
+}
+
+.transcript-table input[type='number'] {
+  width: 76px;
+}
+
+.transcript-table input[type='text'] {
+  width: 100%;
+}
+
+.transcript-col-index {
+  width: 34px;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.transcript-col-time {
+  width: 86px;
+}
+
+.transcript-problems {
+  margin-top: 8px;
+}
+
+.transcript-count {
+  font-size: 12px;
+  color: var(--text-dim);
+  align-self: center;
 }

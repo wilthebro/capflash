@@ -1,6 +1,16 @@
 import type { SegmentStyle } from '@captioner/shared';
 import { FontPicker } from './FontPicker';
 
+/**
+ * Only the weights the export can faithfully reproduce: libass renders any
+ * weight >= 700 as a bold face, so offering 500 would silently become 700.
+ */
+const WEIGHTS = [
+  { value: 400, label: 'Normal' },
+  { value: 700, label: 'Bold' },
+  { value: 800, label: 'Heavy' },
+];
+
 interface Props {
   style: SegmentStyle;
   onChange: (patch: Partial<SegmentStyle>) => void;
@@ -27,6 +37,19 @@ export function StyleFields({ style, onChange }: Props) {
             />
             <span>px</span>
           </div>
+        </div>
+        <div className="field">
+          <span className="field-label">Weight</span>
+          <select
+            value={style.fontWeight}
+            onChange={(e) => onChange({ fontWeight: Number(e.target.value) })}
+          >
+            {WEIGHTS.map((w) => (
+              <option key={w.value} value={w.value}>
+                {w.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="field">
           <span className="field-label">Outline width</span>

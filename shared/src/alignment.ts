@@ -1,5 +1,5 @@
 import { defaultId } from './style';
-import type { Box, DisplayMode, Segment, SegmentStyle, Word } from './types';
+import type { DisplayMode, Segment, SegmentStyle, Word } from './types';
 
 /** Lowercase, strip everything except letters/digits/apostrophes. */
 export function normalizeWord(w: string): string {
@@ -167,7 +167,7 @@ export interface ScriptSegmentResult {
 export function segmentsFromScript(
   transcript: Word[],
   scriptText: string,
-  defaults: { style: SegmentStyle; box: Box; mode: DisplayMode },
+  defaults: { style: SegmentStyle; mode: DisplayMode },
   makeId: () => string = defaultId,
 ): ScriptSegmentResult {
   const lines = scriptText
@@ -237,7 +237,7 @@ export function segmentsFromScript(
       end: Math.max(...times.map((w) => w.end)),
       mode: defaults.mode,
       style: { ...defaults.style },
-      box: { ...defaults.box },
+      // No box: the segment follows the project's default box until moved.
     });
   }
   if (align.unmatchedScript.length > 0) {

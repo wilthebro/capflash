@@ -7,11 +7,13 @@ import {
   hexToAssBgr,
 } from '../src/ass';
 import { eventsForSegment, resolveSegmentLayout } from '../src/layout';
+import { DEFAULT_BOX } from '../src/style';
 import type { RenderSpec, Segment, SegmentStyle } from '../src/types';
 
 const styleA: SegmentStyle = {
   fontFamily: 'Arial',
   fontSize: 64,
+  fontWeight: 700,
   color: '#FFFFFF',
   outlineColor: '#000000',
   outlineWidth: 4,
@@ -20,6 +22,7 @@ const styleA: SegmentStyle = {
 const styleB: SegmentStyle = {
   fontFamily: 'Arial',
   fontSize: 48,
+  fontWeight: 400,
   color: '#00FF00',
   outlineColor: '#FF0000',
   outlineWidth: 0,
@@ -90,7 +93,7 @@ describe('generateAss', () => {
       video: { name: 't.mp4', duration: 2.5, width: 1080, height: 1920 },
       segments: [seg1, seg2].map((seg) => {
         const segWords = seg.wordIds.map((id) => words.find((w) => w.id === id)!);
-        return resolveSegmentLayout(seg, segWords, (t) => measure(t, seg.style));
+        return resolveSegmentLayout(seg, segWords, (t) => measure(t, seg.style), DEFAULT_BOX);
       }),
       fonts: [],
       output: { videoCodec: 'libx264', crf: 18, preset: 'veryfast', audioCodec: 'aac', audioBitrate: '192k' },
@@ -107,15 +110,63 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: st0,Arial,64,&H00FFFFFF,&H0000D4FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,0,8,0,0,0,1
+Style: st0,Arial,64,&H00FFFFFF,&H0000D4FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1,0,8,0,0,0,1
 Style: st1,Arial,48,&H0000FF00,&H00FFFFFF,&H000000FF,&H80000000,0,0,0,0,100,100,0,0,1,0,0,8,0,0,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:00.00,0:00:00.50,st0,,0,0,0,,{\\pos(380,1400)\\an8}hello
 Dialogue: 0,0:00:00.50,0:00:01.00,st0,,0,0,0,,{\\pos(620,1400)\\an8}world
-Dialogue: 0,0:00:01.50,0:00:02.00,st1,,0,0,0,,{\\pos(250,0)\\an8}{\\c&H00FFFFFF}bye{\\c&H0000FF00} now
-Dialogue: 0,0:00:02.00,0:00:02.50,st1,,0,0,0,,{\\pos(250,0)\\an8}bye {\\c&H00FFFFFF}now{\\c&H0000FF00}
+Dialogue: 0,0:00:01.50,0:00:02.00,st1,,0,0,0,,{\\pos(250,0)\\an8}{\\c&H00FFFFFF\\b1\\fs54}bye{\\c&H0000FF00\\b0\\fs48} now
+Dialogue: 0,0:00:02.00,0:00:02.50,st1,,0,0,0,,{\\pos(250,0)\\an8}bye {\\c&H00FFFFFF\\b1\\fs54}now{\\c&H0000FF00\\b0\\fs48}
 `);
+  });
+
+  it('emphasizes the spoken word and restores the base weight and size after it', () => {
+    // styleA is already bold (700), so the restore tag must keep it bold and
+    // return to the base size (highlight size for 64px is 70).
+    const seg: Segment = {
+      id: 's1',
+      wordIds: ['w1'],
+      start: 0,
+      end: 1,
+      mode: 'highlight',
+      style: styleA,
+      box: { x: 0, y: 0, width: 800 },
+    };
+    const word = { id: 'w1', text: 'loud', start: 0, end: 1 };
+    const layout = resolveSegmentLayout(seg, [word], (t) => t.length * 40, DEFAULT_BOX);
+    const ass = generateAss({
+      version: 1,
+      renderer: 'ass',
+      video: { name: 't.mp4', duration: 1, width: 1080, height: 1920 },
+      segments: [layout],
+      fonts: [],
+      output: { videoCodec: 'libx264', crf: 18, preset: 'veryfast', audioCodec: 'aac', audioBitrate: '192k' },
+    });
+    expect(ass).toContain('{\\c&H0000D4FF\\b1\\fs70}loud{\\c&H00FFFFFF\\b1\\fs64}');
+  });
+
+  it('gives styles that differ only in weight or highlight color their own Style line', () => {
+    const make = (weight: number, highlight: string): Segment => ({
+      id: `s${weight}-${highlight}`,
+      wordIds: ['w1'],
+      start: 0,
+      end: 1,
+      mode: 'word',
+      style: { ...styleA, fontWeight: weight, highlightColor: highlight },
+      box: { x: 0, y: 0, width: 800 },
+    });
+    const word = { id: 'w1', text: 'hi', start: 0, end: 1 };
+    const segs = [make(700, '#FFD400'), make(800, '#FFD400'), make(700, '#00FF00')];
+    const ass = generateAss({
+      version: 1,
+      renderer: 'ass',
+      video: { name: 't.mp4', duration: 1, width: 1080, height: 1920 },
+      segments: segs.map((s) => resolveSegmentLayout(s, [word], (t) => t.length * 40, DEFAULT_BOX)),
+      fonts: [],
+      output: { videoCodec: 'libx264', crf: 18, preset: 'veryfast', audioCodec: 'aac', audioBitrate: '192k' },
+    });
+    expect(ass.split('\n').filter((l) => l.startsWith('Style:'))).toHaveLength(3);
   });
 });

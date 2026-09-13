@@ -26,6 +26,8 @@ const BoxSchema = z.object({
 const SegmentStyleSchema = z.object({
   fontFamily: z.string().min(1),
   fontSize: z.number().min(1).max(500),
+  // Defaults to 400 so projects saved before weights existed keep their look.
+  fontWeight: z.number().int().min(100).max(900).default(400),
   color: hexColor,
   outlineColor: hexColor,
   outlineWidth: z.number().min(0).max(50),
@@ -39,7 +41,8 @@ const SegmentSchema = z.object({
   end: z.number().min(0),
   mode: z.enum(['word', 'line', 'highlight']),
   style: SegmentStyleSchema,
-  box: BoxSchema,
+  // Absent means "follow the project's default box"; resolved before rendering.
+  box: BoxSchema.optional(),
 });
 
 const FontRecordSchema = z.object({

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BOX, DEFAULT_STYLE } from '../src/style';
+import { DEFAULT_STYLE } from '../src/style';
 import { splitTranscript } from '../src/segmentation';
 import type { Word } from '../src/types';
 
 const word = (id: string, text: string, start: number, end: number): Word => ({ id, text, start, end });
-const defaults = { style: DEFAULT_STYLE, box: DEFAULT_BOX, mode: 'highlight' as const };
+const defaults = { style: DEFAULT_STYLE, mode: 'highlight' as const };
 let n = 0;
 const makeId = () => `s${n++}`;
 
@@ -23,6 +23,8 @@ describe('splitTranscript', () => {
     expect(segs[0]!.start).toBe(0.0);
     expect(segs[0]!.end).toBe(0.8);
     expect(segs[0]!.mode).toBe('highlight');
+    // Born linked: the segment follows the project's default box until moved.
+    expect(segs[0]!.box).toBeUndefined();
   });
 
   it('splits on trailing quotes after a terminator', () => {

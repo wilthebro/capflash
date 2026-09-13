@@ -4,7 +4,7 @@ import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
 import { RenderSpecSchema, type RenderSpec } from '@captioner/shared';
-import { JOBS_DIR, MAX_VIDEO_BYTES } from '../config';
+import { JOBS_DIR, MAX_SPEC_BYTES, MAX_VIDEO_BYTES } from '../config';
 import { createJob, getJob, setJob } from '../lib/jobs';
 import { getRenderer } from '../lib/renderers/types';
 
@@ -25,7 +25,9 @@ const upload = multer({
       cb(null, `${randomUUID()}${ext}`);
     },
   }),
-  limits: { fileSize: MAX_VIDEO_BYTES, files: 1 },
+  // fieldSize applies to the `spec` form field, not the video: multer's 1 MB
+  // default is smaller than a spec carrying the embedded caption fonts.
+  limits: { fileSize: MAX_VIDEO_BYTES, files: 1, fieldSize: MAX_SPEC_BYTES },
 });
 
 renderRouter.post('/', upload.single('video'), async (req, res) => {

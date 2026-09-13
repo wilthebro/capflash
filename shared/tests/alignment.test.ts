@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BOX, DEFAULT_STYLE } from '../src/style';
+import { DEFAULT_STYLE } from '../src/style';
 import { alignSequences, normalizeWord, segmentsFromScript } from '../src/alignment';
 import type { Word } from '../src/types';
 
 const word = (id: string, text: string, start: number, end: number): Word => ({ id, text, start, end });
-const defaults = { style: DEFAULT_STYLE, box: DEFAULT_BOX, mode: 'line' as const };
+const defaults = { style: DEFAULT_STYLE, mode: 'line' as const };
 let n = 0;
 const makeId = () => `s${n++}`;
 

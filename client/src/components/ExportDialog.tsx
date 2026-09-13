@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getRenderStatus, renderDownloadUrl, startRender, type RenderStatus } from '../lib/api';
+import { bundledFontsReady } from '../lib/bundledFonts';
 import { buildRenderSpec } from '../lib/project';
 import { useEditorStore } from '../store/editorStore';
 
@@ -48,7 +49,10 @@ export function ExportDialog({ open, onClose }: Props) {
     setError('');
     setJobId('');
     try {
-      await document.fonts.ready;
+      // Both matter before the spec is built: document fonts for the faces the
+      // user loaded from disk, bundledFontsReady for the shipped ones — either
+      // way the spec's font bytes have to be in hand before it is serialized.
+      await Promise.all([document.fonts.ready, bundledFontsReady()]);
       const videoFile = useEditorStore.getState().videoFile;
       if (!videoFile) throw new Error('Load a video first.');
       const spec = buildRenderSpec();

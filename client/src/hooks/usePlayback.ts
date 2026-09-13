@@ -1,7 +1,41 @@
 import { useEffect, useRef } from 'react';
 import type React from 'react';
+import type { DisplayEvent } from '@captioner/shared';
 import { useEditorStore } from '../store/editorStore';
 import { useSegmentLayouts } from './useSegmentLayouts';
+
+/**
+ * Fingerprint of everything the overlay actually renders. Comparing the whole
+ * event list by reference would false-positive every frame (the store rebuilds
+ * the objects), so the key has to cover every field CaptionOverlay reads —
+ * including the ones that don't move anything: an earlier version keyed on
+ * `start:end:text:y` alone, so re-styling a caption (mode, color, weight) at
+ * unchanged geometry left the overlay rendering the old objects forever.
+ */
+function eventKey(events: readonly DisplayEvent[]): string {
+  return events
+    .map((e) => {
+      const st = e.style;
+      const spans = e.words.map((w) => `${w.charStart}-${w.charEnd}-${w.highlighted ? 1 : 0}`).join(',');
+      return [
+        e.start,
+        e.end,
+        e.mode,
+        e.text,
+        e.x,
+        e.y,
+        spans,
+        st.fontFamily,
+        st.fontSize,
+        st.fontWeight,
+        st.color,
+        st.outlineColor,
+        st.outlineWidth,
+        st.highlightColor,
+      ].join(':');
+    })
+    .join('|');
+}
 
 /**
  * rAF loop reading video.currentTime (`timeupdate` fires at ~4 Hz — far too
@@ -24,7 +58,7 @@ export function usePlayback(videoRef: React.RefObject<HTMLVideoElement | null>):
           if (e.start > t) break;
           if (t < e.end) active.push(e);
         }
-        const key = active.map((e) => `${e.start}:${e.end}:${e.text}:${e.y}`).join('|');
+        const key = eventKey(active);
         if (key !== lastKey.current) {
           lastKey.current = key;
           useEditorStore.getState().setActiveEvents(active);

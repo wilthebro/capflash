@@ -1,4 +1,9 @@
-import { LINE_HEIGHT, type DisplayEvent } from '@captioner/shared';
+import {
+  highlightFontSize,
+  highlightFontWeight,
+  LINE_HEIGHT,
+  type DisplayEvent,
+} from '@captioner/shared';
 import { useEditorStore } from '../store/editorStore';
 
 /** Renders the currently active caption events over the video (video-px coordinates). */
@@ -27,8 +32,15 @@ function CaptionEventView({ event }: { event: DisplayEvent }) {
         top: event.y,
         fontFamily: `"${style.fontFamily}", sans-serif`,
         fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
         color: style.color,
         WebkitTextStroke: outline,
+        // Paint the outline behind the glyph instead of centred on its edge, so
+        // the letterform keeps its full weight. That is also how libass draws a
+        // border, so the preview and the export agree on how thick the text
+        // looks. Browsers that don't implement paint-order for text fall back to
+        // the usual centred stroke.
+        paintOrder: outline ? 'stroke fill' : undefined,
         lineHeight: LINE_HEIGHT,
         textAlign: 'center',
       }}
@@ -47,7 +59,17 @@ function HighlightedText({ event }: { event: DisplayEvent }) {
     parts.push(
       <span
         key={i}
-        style={w.highlighted ? { color: event.style.highlightColor } : undefined}
+        style={
+          w.highlighted
+            ? {
+                color: event.style.highlightColor,
+                // Same emphasis the ASS generator emits (\b1\fs<big>): bold and
+                // ~10% larger, so the spoken word is unmistakable at a glance.
+                fontWeight: highlightFontWeight(event.style.fontWeight),
+                fontSize: highlightFontSize(event.style.fontSize),
+              }
+            : undefined
+        }
       >
         {word}
       </span>,

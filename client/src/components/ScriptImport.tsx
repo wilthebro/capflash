@@ -1,28 +1,37 @@
 import { useState } from 'react';
 import { useEditorStore, type ScriptImportResult } from '../store/editorStore';
 
+interface Props {
+  onTranscribe: () => void;
+}
+
 /**
  * Plaintext script import: the script's own line breaks define caption
- * segments, overriding period-based splitting. Word timestamps still come
- * from the transcript (aligned in sequence order).
+ * segments, overriding period-based splitting. Word timestamps come from the
+ * transcript — either a loaded JSON file or Whisper's own transcription, so a
+ * script can be used with no JSON transcript at all.
  */
-export function ScriptImport() {
+export function ScriptImport({ onTranscribe }: Props) {
   const importScript = useEditorStore((s) => s.importScript);
   const words = useEditorStore((s) => s.words);
-  const [text, setText] = useState('');
+  const scriptText = useEditorStore((s) => s.scriptText);
+  const setScriptText = useEditorStore((s) => s.setScriptText);
+  const hasVideo = useEditorStore((s) => s.videoMeta !== null);
   const [result, setResult] = useState<ScriptImportResult | null>(null);
 
   const apply = () => {
-    if (!text.trim()) return;
-    setResult(importScript(text));
+    if (!scriptText.trim()) return;
+    setResult(importScript(scriptText));
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    setText(await file.text());
+    setScriptText(await file.text());
   };
+
+  const noTranscript = words.length === 0;
 
   return (
     <section className="panel">
@@ -34,20 +43,31 @@ export function ScriptImport() {
       <textarea
         className="script-textarea"
         placeholder={'One caption line per line…\n\nExample:\nHello world\nThis stays together'}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        disabled={words.length === 0}
+        value={scriptText}
+        onChange={(e) => setScriptText(e.target.value)}
       />
       <div className="button-row">
         <label className="button ghost">
           Open .txt
           <input type="file" accept=".txt,text/plain" hidden onChange={(e) => void onFile(e)} />
         </label>
-        <button className="button" onClick={apply} disabled={words.length === 0 || !text.trim()}>
-          Apply script
-        </button>
+        {noTranscript ? (
+          <button className="button" onClick={onTranscribe} disabled={!hasVideo}>
+            Transcribe audio
+          </button>
+        ) : (
+          <button className="button" onClick={apply} disabled={!scriptText.trim()}>
+            Apply script
+          </button>
+        )}
       </div>
-      {words.length === 0 && <p className="panel-warn">Load a transcript first (timings come from it).</p>}
+      {noTranscript && (
+        <p className="panel-hint">
+          {hasVideo
+            ? 'No transcript yet. Paste your script, then transcribe the video: Whisper supplies the word timings and this script defines the caption lines.'
+            : 'Load a video, then transcribe it to get word timings — or load a transcript JSON.'}
+        </p>
+      )}
       {result && (
         <div className="script-result">
           <p className="script-stats">

@@ -3,9 +3,11 @@ import { useEditorStore } from '../store/editorStore';
 
 interface Props {
   onExport: () => void;
+  onTranscribe: () => void;
+  onEditTranscript: () => void;
 }
 
-export function ProjectToolbar({ onExport }: Props) {
+export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript }: Props) {
   const projectName = useEditorStore((s) => s.projectName);
   const setProjectName = useEditorStore((s) => s.setProjectName);
   const loadVideo = useEditorStore((s) => s.loadVideo);
@@ -16,6 +18,7 @@ export function ProjectToolbar({ onExport }: Props) {
   const reset = useEditorStore((s) => s.reset);
   const hasVideo = useEditorStore((s) => s.videoMeta !== null);
   const hasSegments = useEditorStore((s) => s.segments.length > 0);
+  const hasWords = useEditorStore((s) => s.words.length > 0);
   const isPlaying = useEditorStore((s) => s.isPlaying);
 
   const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -97,6 +100,12 @@ export function ProjectToolbar({ onExport }: Props) {
           onChange={(e) => void onTranscriptFile(e)}
         />
       </label>
+      <button className="button ghost" onClick={onTranscribe} disabled={!hasVideo} title="Speech-to-text in your browser">
+        Transcribe
+      </button>
+      <button className="button ghost" onClick={onEditTranscript} disabled={!hasWords}>
+        Edit transcript
+      </button>
       <label className="button ghost">
         Open project
         <input type="file" accept=".json,application/json" hidden onChange={(e) => void onProjectFile(e)} />

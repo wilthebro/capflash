@@ -1,5 +1,5 @@
 import { defaultId } from './style';
-import type { Box, DisplayMode, Segment, SegmentStyle, Word } from './types';
+import type { DisplayMode, Segment, SegmentStyle, Word } from './types';
 
 const SENTENCE_END = /[.!?…]["')\]]*$/;
 
@@ -15,7 +15,7 @@ export interface SplitOptions {
  */
 export function splitTranscript(
   transcript: Word[],
-  defaults: { style: SegmentStyle; box: Box; mode: DisplayMode },
+  defaults: { style: SegmentStyle; mode: DisplayMode },
   makeId: () => string = defaultId,
   opts?: SplitOptions,
 ): Segment[] {
@@ -34,7 +34,7 @@ export function splitTranscript(
       end: cur[cur.length - 1]!.end,
       mode: defaults.mode,
       style: { ...defaults.style },
-      box: { ...defaults.box },
+      // No box: the segment follows the project's default box until moved.
     });
     cur = [];
   };

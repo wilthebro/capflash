@@ -20,6 +20,7 @@ export type DisplayMode = 'word' | 'line' | 'highlight';
 export interface SegmentStyle {
   fontFamily: string; // matches FontFace family / ASS Fontname
   fontSize: number; // video px
+  fontWeight: number; // 400/700/800; >= 700 exports as ASS Bold
   color: string; // #RRGGBB
   outlineColor: string; // #RRGGBB
   outlineWidth: number; // video px
@@ -34,7 +35,8 @@ export interface Segment {
   end: number;
   mode: DisplayMode;
   style: SegmentStyle;
-  box: Box;
+  /** Absent = follow the project's default box live (see Project.defaultBox). */
+  box?: Box;
 }
 
 /** A font known to the editor; uploaded fonts carry their bytes. */

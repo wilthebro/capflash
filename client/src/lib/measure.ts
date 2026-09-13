@@ -13,13 +13,23 @@ function getMeasureCtx(): CanvasRenderingContext2D {
 // Cache is invalidated when fonts load or change (clearMeasureCache).
 const cache = new Map<string, number>();
 
-/** Measure text width in px for the given family/size (same engine that renders the preview DOM). */
-export function measureText(text: string, fontFamily: string, fontSize: number): number {
-  const key = `${fontFamily}|${fontSize}|${text}`;
+/**
+ * Measure text width in px for the given family/size/weight (same engine that
+ * renders the preview DOM). The weight is part of the key: a bold face is
+ * wider than its regular counterpart, so sharing a cache entry would give one
+ * of them the other's geometry.
+ */
+export function measureText(
+  text: string,
+  fontFamily: string,
+  fontSize: number,
+  fontWeight: number,
+): number {
+  const key = `${fontFamily}|${fontSize}|${fontWeight}|${text}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const c = getMeasureCtx();
-  c.font = `${fontSize}px "${fontFamily}"`;
+  c.font = `${fontWeight} ${fontSize}px "${fontFamily}"`;
   const w = c.measureText(text).width;
   cache.set(key, w);
   return w;

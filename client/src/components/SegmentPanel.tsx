@@ -12,6 +12,7 @@ const MODES: { value: DisplayMode; label: string }[] = [
 export function SegmentPanel() {
   const segments = useEditorStore((s) => s.segments);
   const selection = useEditorStore((s) => s.selection);
+  const defaultBox = useEditorStore((s) => s.defaultBox);
   const updateSegment = useEditorStore((s) => s.updateSegment);
   const mergeSegments = useEditorStore((s) => s.mergeSegments);
   const deleteSegments = useEditorStore((s) => s.deleteSegments);
@@ -48,6 +49,8 @@ export function SegmentPanel() {
   }
 
   const seg = selected[0]!;
+  const linked = seg.box === undefined;
+  const box = seg.box ?? defaultBox;
   return (
     <section className="panel">
       <h2 className="panel-title">Segment</h2>
@@ -76,9 +79,9 @@ export function SegmentPanel() {
           <span className="field-label">Box X</span>
           <input
             type="number"
-            value={Math.round(seg.box.x)}
+            value={Math.round(box.x)}
             onChange={(e) =>
-              updateSegment(seg.id, { box: { ...seg.box, x: Math.max(0, Number(e.target.value) || 0) } })
+              updateSegment(seg.id, { box: { ...box, x: Math.max(0, Number(e.target.value) || 0) } })
             }
           />
         </div>
@@ -86,9 +89,9 @@ export function SegmentPanel() {
           <span className="field-label">Box Y</span>
           <input
             type="number"
-            value={Math.round(seg.box.y)}
+            value={Math.round(box.y)}
             onChange={(e) =>
-              updateSegment(seg.id, { box: { ...seg.box, y: Math.max(0, Number(e.target.value) || 0) } })
+              updateSegment(seg.id, { box: { ...box, y: Math.max(0, Number(e.target.value) || 0) } })
             }
           />
         </div>
@@ -97,16 +100,26 @@ export function SegmentPanel() {
           <input
             type="number"
             min={40}
-            value={Math.round(seg.box.width)}
+            value={Math.round(box.width)}
             onChange={(e) =>
               updateSegment(seg.id, {
-                box: { ...seg.box, width: Math.max(40, Number(e.target.value) || 40) },
+                box: { ...box, width: Math.max(40, Number(e.target.value) || 40) },
               })
             }
           />
         </div>
       </div>
+      <p className="panel-hint">
+        {linked
+          ? 'This caption follows the global box — dragging it here pins its own position.'
+          : 'This caption has its own box, so the global box no longer moves it.'}
+      </p>
       <div className="button-row">
+        {!linked && (
+          <button className="button ghost" onClick={() => updateSegment(seg.id, { box: undefined })}>
+            Reset box to default
+          </button>
+        )}
         <button className="button danger" onClick={() => deleteSegments([seg.id])}>
           Delete segment
         </button>

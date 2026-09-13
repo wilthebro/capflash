@@ -14,10 +14,20 @@ import { wrapWords, type MeasureFn } from './wrapping';
  * Resolve a segment to absolute video-px geometry plus its display events.
  * The measure function is injected so this module stays DOM-free (canvas
  * measureText in the client, mock functions in tests).
+ *
+ * A segment without its own `box` follows `defaultBox` — that is what makes the
+ * global caption position live: segments only store a box once they are moved
+ * individually. The returned layout always carries a resolved, concrete box.
  */
-export function resolveSegmentLayout(seg: Segment, words: Word[], measure: MeasureFn): ExportSegment {
-  const { lines, placements } = wrapWords(words, seg.box.width, measure);
-  const centerX = seg.box.x + seg.box.width / 2;
+export function resolveSegmentLayout(
+  seg: Segment,
+  words: Word[],
+  measure: MeasureFn,
+  defaultBox: Box,
+): ExportSegment {
+  const box = seg.box ?? defaultBox;
+  const { lines, placements } = wrapWords(words, box.width, measure);
+  const centerX = box.x + box.width / 2;
   const exportLines: ExportLine[] = lines.map((line, lineIndex) => {
     const exportWords = placements
       .filter((p) => p.lineIndex === lineIndex)
@@ -31,13 +41,13 @@ export function resolveSegmentLayout(seg: Segment, words: Word[], measure: Measu
       }));
     return {
       text: line.text,
-      topY: seg.box.y + lineIndex * seg.style.fontSize * LINE_HEIGHT,
+      topY: box.y + lineIndex * seg.style.fontSize * LINE_HEIGHT,
       centerX,
       widthPx: line.widthPx,
       words: exportWords,
     };
   });
-  const layout = { mode: seg.mode, style: seg.style, box: seg.box, lines: exportLines };
+  const layout = { mode: seg.mode, style: seg.style, box, lines: exportLines };
   return { ...layout, events: eventsForSegment(seg, layout) };
 }
 
