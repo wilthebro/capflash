@@ -1,0 +1,6 @@
+node_modules/
+dist/
+server/data/
+test-assets/*
+!test-assets/sample-transcript.json
+*.mp4

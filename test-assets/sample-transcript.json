@@ -1,0 +1,20 @@
+[
+  { "text": "Hello", "start": 0.20, "end": 0.50 },
+  { "text": "world,", "start": 0.50, "end": 0.90 },
+  { "text": "this", "start": 0.90, "end": 1.30 },
+  { "text": "is", "start": 1.30, "end": 1.70 },
+  { "text": "a", "start": 1.70, "end": 2.10 },
+  { "text": "test", "start": 2.10, "end": 2.50 },
+  { "text": "sentence", "start": 2.50, "end": 2.90 },
+  { "text": "here.", "start": 2.90, "end": 3.30 },
+  { "text": "Second", "start": 3.60, "end": 4.00 },
+  { "text": "sentence", "start": 4.00, "end": 4.40 },
+  { "text": "starts", "start": 4.40, "end": 4.80 },
+  { "text": "right", "start": 4.80, "end": 5.20 },
+  { "text": "now", "start": 5.20, "end": 5.60 },
+  { "text": "okay!", "start": 5.60, "end": 6.00 },
+  { "text": "One", "start": 6.20, "end": 6.50 },
+  { "text": "more", "start": 6.50, "end": 6.90 },
+  { "text": "line", "start": 6.90, "end": 7.30 },
+  { "text": "here", "start": 7.30, "end": 7.70 }
+]
