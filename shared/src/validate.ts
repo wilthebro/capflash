@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_MAX_LINES, MAX_LINES } from './style';
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
@@ -21,6 +22,12 @@ const BoxSchema = z.object({
   x: z.number(),
   y: z.number(),
   width: z.number().positive(),
+  // Defaults so `.captioner.json` files saved before the box had a height and
+  // alignment still load — they come back as the original 2-line, centred,
+  // top-anchored box the editor drew at the time.
+  maxLines: z.number().int().min(1).max(MAX_LINES).default(DEFAULT_MAX_LINES),
+  alignX: z.enum(['left', 'center', 'right']).default('center'),
+  alignY: z.enum(['top', 'middle', 'bottom']).default('top'),
 });
 
 const SegmentStyleSchema = z.object({
@@ -76,6 +83,8 @@ const DisplayEventSchema = z.object({
   text: z.string(),
   x: z.number(),
   y: z.number(),
+  boxWidth: z.number().positive(),
+  alignX: z.enum(['left', 'center', 'right']),
   words: z.array(
     z.object({
       charStart: z.number().int().min(0),

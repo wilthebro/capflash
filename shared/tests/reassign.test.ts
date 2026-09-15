@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { reassignSegments } from '../src/reassign';
 import { DEFAULT_BOX, DEFAULT_STYLE } from '../src/style';
 import type { Segment, SegmentStyle, Word } from '../src/types';
+import { makeBox } from './helpers';
 
 const word = (id: string, start: number, end: number, text = id): Word => ({ id, text, start, end });
 
@@ -35,12 +36,12 @@ describe('reassignSegments', () => {
     const words = [word('a', 0, 0.5, 'Hello')];
     const segs = [seg('s1', ['a'], 0, 0.5, { fontSize: 99, color: '#FF0000' })];
     segs[0]!.mode = 'word';
-    segs[0]!.box = { x: 10, y: 20, width: 300 };
+    segs[0]!.box = makeBox(10, 20, 300);
     const r = reassignSegments(segs, words, defaults, makeId);
     expect(r.segments[0]!.style.fontSize).toBe(99);
     expect(r.segments[0]!.style.color).toBe('#FF0000');
     expect(r.segments[0]!.mode).toBe('word');
-    expect(r.segments[0]!.box).toEqual({ x: 10, y: 20, width: 300 });
+    expect(r.segments[0]!.box).toEqual(makeBox(10, 20, 300));
   });
 
   it('keeps a word in its segment when its timing is edited, stretching the bounds', () => {

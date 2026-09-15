@@ -1,0 +1,16 @@
+# Replace the example.com origin here, in public/sitemap.xml and in
+# src/site/config.ts before deploying.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# AdSense's crawlers have to reach the pages that carry the ad code, and the
+# site-level review crawler reads the landing page.
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml

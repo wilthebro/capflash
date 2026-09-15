@@ -11,6 +11,10 @@ import { useSegmentLayouts } from './useSegmentLayouts';
  * including the ones that don't move anything: an earlier version keyed on
  * `start:end:text:y` alone, so re-styling a caption (mode, color, weight) at
  * unchanged geometry left the overlay rendering the old objects forever.
+ *
+ * `alignX`/`boxWidth` are in for the same reason: a block event's x is the
+ * box's left edge, so changing the alignment alone moves nothing in the
+ * geometry above and would otherwise never reach the overlay.
  */
 function eventKey(events: readonly DisplayEvent[]): string {
   return events
@@ -24,6 +28,8 @@ function eventKey(events: readonly DisplayEvent[]): string {
         e.text,
         e.x,
         e.y,
+        e.alignX,
+        e.boxWidth,
         spans,
         st.fontFamily,
         st.fontSize,

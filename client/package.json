@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@captioner/shared": "*",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@huggingface/transformers": "^4.2.0",
     "opentype.js": "^1.3.4",
     "react": "^18.3.1",
@@ -18,6 +20,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@ffmpeg/core": "^0.12.10",
     "@types/opentype.js": "^1.3.10",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

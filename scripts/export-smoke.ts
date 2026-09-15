@@ -12,6 +12,7 @@ import path from 'node:path';
 import {
   DEFAULT_BOX,
   resolveSegmentLayout,
+  type Box,
   type RenderSpec,
   type Segment,
   type SegmentStyle,
@@ -98,6 +99,21 @@ const words: Word[] = RAW.map(([text, start], i) => ({
 
 const measure = (t: string, style: SegmentStyle) => t.length * style.fontSize * 0.55;
 
+/**
+ * A box with the shipped defaults. This script is outside every tsconfig, so
+ * nothing here is typechecked — a box missing `maxLines` would not fail the
+ * build, it would silently lay out as NaN and drop every caption.
+ */
+const makeBox = (x: number, y: number, width: number, over: Partial<Box> = {}): Box => ({
+  x,
+  y,
+  width,
+  maxLines: 2,
+  alignX: 'center',
+  alignY: 'top',
+  ...over,
+});
+
 function makeSegment(id: string, idx: [number, number], mode: Segment['mode'], style: SegmentStyle, box?: Segment['box']): Segment {
   const ids = words.slice(idx[0], idx[1] + 1).map((w) => w.id);
   const ws = words.slice(idx[0], idx[1] + 1);
@@ -114,16 +130,21 @@ function makeSegment(id: string, idx: [number, number], mode: Segment['mode'], s
 
 async function buildSpec(): Promise<RenderSpec> {
   const segs = [
-    makeSegment('s-word', [0, 7], 'word', STYLE_A, { x: 100, y: 1400, width: 800 }),
-    makeSegment('s-highlight', [8, 13], 'highlight', STYLE_B, { x: 100, y: 1450, width: 800 }),
-    makeSegment('s-line', [14, 17], 'line', STYLE_A, { x: 100, y: 1580, width: 800 }),
+    makeSegment('s-word', [0, 7], 'word', STYLE_A, makeBox(100, 1400, 800)),
+    makeSegment('s-highlight', [8, 13], 'highlight', STYLE_B, makeBox(100, 1450, 800)),
+    makeSegment('s-line', [14, 17], 'line', STYLE_A, makeBox(100, 1580, 800)),
+    // One line tall, so a two-line caption has to page.
+    makeSegment('s-paged', [8, 13], 'line', STYLE_A, makeBox(100, 200, 800, { maxLines: 1 })),
+    // Box-edge placement rather than the default centring.
+    makeSegment('s-left', [4, 7], 'line', STYLE_B, makeBox(100, 1000, 800, { alignX: 'left' })),
+    makeSegment('s-right', [0, 3], 'line', STYLE_B, makeBox(100, 1200, 800, { alignX: 'right' })),
   ];
   // Custom-font gate: same text at y=1700 in Bebas Neue when the font file exists.
   let fonts: RenderSpec['fonts'] = [];
   try {
     const buf = await fs.readFile(FONT_PATH);
     fonts = [{ family: 'Bebas Neue', fileName: 'BebasNeue-Regular.ttf', dataBase64: buf.toString('base64') }];
-    segs.push(makeSegment('s-font', [14, 17], 'line', STYLE_CUSTOM, { x: 100, y: 1700, width: 800 }));
+    segs.push(makeSegment('s-font', [14, 17], 'line', STYLE_CUSTOM, makeBox(100, 1700, 800)));
   } catch {
     console.log('⚠ BebasNeue-Regular.ttf not found in test-assets — skipping custom-font segment');
   }
@@ -138,7 +159,7 @@ async function buildSpec(): Promise<RenderSpec> {
       { family: 'Montserrat', fileName: 'Montserrat-Regular.ttf', dataBase64: regular.toString('base64') },
       { family: 'Montserrat', fileName: 'Montserrat-ExtraBold.ttf', dataBase64: extraBold.toString('base64') },
     );
-    segs.push(makeSegment('s-bundled', [0, 3], 'line', STYLE_BUNDLED, { x: 100, y: 100, width: 800 }));
+    segs.push(makeSegment('s-bundled', [0, 3], 'line', STYLE_BUNDLED, makeBox(100, 100, 800)));
     segs.push(makeSegment('s-linked', [4, 7], 'line', STYLE_BUNDLED));
   } catch {
     console.log('⚠ bundled Montserrat fonts not found — skipping bundled-font segments');
@@ -268,6 +289,10 @@ async function main(): Promise<void> {
     const boldOf = (fontname: string, fontsize: number) =>
       styleLines.find((l) => l.split(',')[1] === fontname && l.split(',')[2] === String(fontsize))?.split(',')[7];
     const montserrat = styleLines.filter((l) => l.split(',')[1] === 'Montserrat');
+    // s-paged sits at (500,200) in a box one line tall. If paging works, its
+    // dialogues are one line each — several of them, none stacking a second
+    // line under the first with \N.
+    const paged = dialogues.filter((l) => l.includes('\\pos(500,200)'));
     const checks = [
       ['word event', dialogues.some((l) => l.includes('\\pos') && l.endsWith('Hello'))],
       ['highlight color tag', dialogues.some((l) => l.includes('\\c&H0000D4FF'))],
@@ -286,6 +311,13 @@ async function main(): Promise<void> {
           ] as const)
         : []),
       ['a box-less segment falls back to the default box', dialogues.some((l) => l.includes(`\\pos(540,${DEFAULT_BOX.y})`))],
+      // Paging: several single-line dialogues at one anchor, not one dialogue
+      // with both lines \N'd together.
+      ['a one-line box pages instead of stacking', paged.length > 1 && paged.every((l) => !l.includes('\\N'))],
+      // Alignment reaches the export as the anchor code: box.x for \an7, and
+      // box.x + width for \an9.
+      ['alignX left anchors on \\an7', dialogues.some((l) => l.includes('{\\pos(100,1000)\\an7}'))],
+      ['alignX right anchors on \\an9', dialogues.some((l) => l.includes('{\\pos(900,1200)\\an9}'))],
     ] as const;
     for (const [name, ok] of checks) console.log(`${ok ? '✓' : '✗ MISSING'} ${name}`);
     if (checks.some(([, ok]) => !ok)) throw new Error('ASS spot checks failed');

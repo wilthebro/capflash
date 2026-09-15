@@ -1,3 +1,8 @@
+/* ---------- brand colours ----------
+   The single source of truth for the palette. site.css derives the marketing
+   site's tokens from the values below, so changing --accent here recolours the
+   editor and the site together. */
+
 :root {
   color-scheme: dark;
   --bg: #141518;
@@ -38,6 +43,13 @@ body {
   display: grid;
   grid-template-rows: auto 1fr 264px;
   height: 100vh;
+}
+
+/* Shown while the lazily-loaded editor chunk arrives. It has to fill the
+   viewport itself because body.site-mode has released the height chain. */
+.app-loading {
+  height: 100vh;
+  background: var(--bg);
 }
 
 .main {
@@ -81,6 +93,13 @@ body {
   font-weight: 700;
   margin-right: 4px;
   white-space: nowrap;
+  /* It is a link back to the site now, not plain text. */
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-title:hover {
+  color: var(--accent-2);
 }
 
 .project-name {
@@ -424,14 +443,22 @@ input[type='color'] {
 
 .caption-event {
   position: absolute;
-  transform: translateX(-50%);
-  /* 'pre-line' keeps the '\n' between a wrapped block's lines (line/highlight
-     mode) while still collapsing runs of spaces; the div is as wide as its
-     longest line and every line is centred on the block's anchor X. */
-  white-space: pre-line;
-  width: max-content;
+  /* 'pre', not 'pre-line': the block div is now as wide as the box, and a
+     browser that soft-wrapped inside it would break a word longer than the box
+     onto a further line that libass never draws. 'pre' honours the '\n' between
+     a page's lines and never wraps on its own, so the two agree. Word text is
+     whitespace-normalized upstream, so there are no runs of spaces for 'pre'
+     to preserve. */
+  white-space: pre;
   pointer-events: none;
   font-family: inherit;
+}
+
+/* Word mode: one word, pinned at its own centre. Line/highlight mode instead
+   gets the box's width and text-align inline, so it needs nothing here. */
+.caption-event.is-word {
+  transform: translateX(-50%);
+  width: max-content;
 }
 
 .bounding-box {
@@ -467,14 +494,155 @@ input[type='color'] {
 
 .bounding-box-handle {
   position: absolute;
+  background: var(--accent-2);
+  border-radius: 4px;
+}
+
+/* Right edge: width. */
+.bounding-box-handle.is-right {
   right: -6px;
   top: 50%;
   transform: translateY(-50%);
   width: 11px;
   height: 26px;
-  background: var(--accent-2);
-  border-radius: 4px;
   cursor: ew-resize;
+}
+
+/* Bottom edge: how many lines the box shows before the text pages. */
+.bounding-box-handle.is-bottom {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 11px;
+  cursor: ns-resize;
+}
+
+/* ---------- box fields ---------- */
+
+.align-row {
+  align-items: flex-start;
+}
+
+.align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  width: 96px;
+}
+
+.align-cell {
+  height: 24px;
+  font-size: 12px;
+  line-height: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.align-cell:hover {
+  background: #34373f;
+}
+
+.align-cell.is-active {
+  border-color: var(--accent-2);
+  background: rgba(91, 140, 255, 0.16);
+  color: #fff;
+}
+
+/* ---------- help ---------- */
+
+.help-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.help-step-title {
+  font-weight: 600;
+}
+
+.help-step-body {
+  margin: 2px 0 0;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+/* ---------- ads ---------- */
+
+.ad-pane {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  padding: 12px;
+  overflow-y: auto;
+}
+
+/* The rail is worth less than the preview: on a narrow window drop it rather
+   than squeeze the video. */
+@media (max-width: 1280px) {
+  .ad-pane {
+    display: none;
+  }
+}
+
+.ad-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Reserve the rail's height: an unapproved or slow-to-fill ad unit renders
+     nothing, and without this the column collapses and then jumps. */
+  min-height: 250px;
+}
+
+.ad-chip {
+  align-self: flex-start;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1px 6px;
+}
+
+.ad-card {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.ad-card-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ad-card-body {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.ad-card-cta {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 /* ---------- timeline ---------- */
@@ -780,6 +948,25 @@ input[type='color'] {
   display: flex;
   justify-content: flex-end;
   margin-top: 14px;
+}
+
+/* Legal links pinned to the far left of the action row, away from Close. */
+.modal-actions-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: auto;
+  font-size: 12px;
+}
+
+.modal-actions-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.modal-actions-links a:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
 }
 
 .download-button {

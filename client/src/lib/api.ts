@@ -6,6 +6,22 @@ export interface RenderStatus {
   error?: string;
 }
 
+export interface HealthStatus {
+  ok: boolean;
+  ffmpeg: { found: boolean; version: string; libass: boolean; whisper: boolean };
+}
+
+/**
+ * What the server can actually do. The server route only chooses the export
+ * engine when its ffmpeg is present AND built with libass — without libass there
+ * is no `ass` filter, so it cannot burn captions in at all.
+ */
+export async function fetchHealth(): Promise<HealthStatus> {
+  const res = await fetch('/api/health');
+  if (!res.ok) throw new Error(`Health request failed (${res.status})`);
+  return (await res.json()) as HealthStatus;
+}
+
 export async function startRender(spec: RenderSpec, videoFile: File): Promise<string> {
   const fd = new FormData();
   fd.append('spec', JSON.stringify(spec));

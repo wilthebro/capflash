@@ -1,42 +1,38 @@
-import { useState } from 'react';
-import { ExportDialog } from './components/ExportDialog';
-import { ProjectToolbar } from './components/ProjectToolbar';
-import { ScriptImport } from './components/ScriptImport';
-import { SegmentPanel } from './components/SegmentPanel';
-import { StylePanel } from './components/StylePanel';
-import { Timeline } from './components/Timeline';
-import { TranscribeDialog } from './components/TranscribeDialog';
-import { TranscriptEditorDialog } from './components/TranscriptEditorDialog';
-import { VideoPreview } from './components/VideoPreview';
-import { useHotkeys } from './hooks/useHotkeys';
+import { Suspense, lazy } from 'react';
+import type { ComponentType } from 'react';
+import { usePath } from './lib/router';
+import { Contact } from './pages/Contact';
+import { Landing } from './pages/Landing';
+import { NotFound } from './pages/NotFound';
+import { Privacy } from './pages/Privacy';
+import { Terms } from './pages/Terms';
+
+/**
+ * The editor is the heavy half of the bundle — timeline, export pipeline,
+ * transcript dialogs, the whole render spec — and the landing page is what most
+ * visitors load first. Splitting it keeps that weight off the first paint.
+ */
+const Editor = lazy(() => import('./pages/Editor').then((module) => ({ default: module.Editor })));
+
+/** Every route that renders a marketing page. Anything else is a 404. */
+const SITE_ROUTES: Record<string, ComponentType> = {
+  '/': Landing,
+  '/privacy': Privacy,
+  '/terms': Terms,
+  '/contact': Contact,
+};
 
 export default function App() {
-  useHotkeys();
-  const [exportOpen, setExportOpen] = useState(false);
-  const [transcribeOpen, setTranscribeOpen] = useState(false);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const path = usePath();
 
-  return (
-    <div className="app">
-      <ProjectToolbar
-        onExport={() => setExportOpen(true)}
-        onTranscribe={() => setTranscribeOpen(true)}
-        onEditTranscript={() => setEditorOpen(true)}
-      />
-      <div className="main">
-        <div className="preview-pane">
-          <VideoPreview />
-        </div>
-        <aside className="side-pane">
-          <StylePanel />
-          <SegmentPanel />
-          <ScriptImport onTranscribe={() => setTranscribeOpen(true)} />
-        </aside>
-      </div>
-      <Timeline />
-      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
-      <TranscribeDialog open={transcribeOpen} onClose={() => setTranscribeOpen(false)} />
-      <TranscriptEditorDialog open={editorOpen} onClose={() => setEditorOpen(false)} />
-    </div>
-  );
+  if (path === '/app') {
+    return (
+      <Suspense fallback={<div className="app-loading" />}>
+        <Editor />
+      </Suspense>
+    );
+  }
+
+  const Page = SITE_ROUTES[path];
+  return Page ? <Page /> : <NotFound />;
 }

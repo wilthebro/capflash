@@ -1,0 +1,960 @@
+/* ============================================================================
+   Marketing site — everything outside the editor.
+
+   Loaded after index.css (:root / body / * / a handful of element selectors are
+   the only things it shares). Two rules hold this file together:
+
+     1. Every colour is a token. The tokens derive from index.css, so changing
+        --accent there recolours the editor and the site together.
+     2. Every class is prefixed .site-, so nothing here can collide with the
+        editor's flat names (.panel, .button, .modal).
+   ========================================================================== */
+
+/* The editor registers these same two files at runtime as FontFace objects,
+   under the family 'Montserrat'. Declaring them here under a different name
+   starts the download at CSS-parse time rather than after main.tsx has run,
+   without adding to the set of faces the editor's text measurement depends on.
+   Identical URLs, so Vite hashes them once and the browser fetches them once. */
+@font-face {
+  font-family: 'Montserrat Site';
+  src: url('./assets/fonts/Montserrat-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Montserrat Site';
+  src: url('./assets/fonts/Montserrat-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+
+/* ---------- tokens ---------- */
+
+:root {
+  /* Layout */
+  --site-max: 1120px;
+  --site-gutter: 24px;
+  --site-radius: 10px;
+  --site-header-h: 60px;
+
+  /* Brand. Everything textual uses --accent-2 rather than --accent: --accent
+     (#3b6ef5) measures 3.9:1 on --bg and fails WCAG AA for text, while
+     --accent-2 (#5b8cff) is 5.87:1. As a button fill it pairs with near-black
+     text for 5.9:1. */
+  --site-cta-bg: var(--accent-2);
+  --site-cta-text: var(--bg);
+  --site-link: var(--accent-2);
+  --site-text: var(--text);
+  --site-dim: var(--text-dim);
+  --site-line: var(--border);
+  --site-panel: var(--bg-panel);
+  --site-panel-2: var(--bg-panel-2);
+  --site-mock-glow: rgba(91, 140, 255, 0.2);
+  --site-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+
+  /* The app chrome face, so the site reads as the same product. */
+  --site-font-body: 'Segoe UI', system-ui, sans-serif;
+  --site-font-display: 'Montserrat Site', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ---------- document overrides ----------
+   index.css pins html/body/#root to the viewport height and hides body
+   overflow, because the editor is a fixed-viewport app. No descendant selector
+   can undo a document-level rule, so the site opts out at the document level —
+   toggled by SiteLayout in a layout effect, which is before the first paint. */
+
+body.site-mode,
+body.site-mode #root {
+  height: auto;
+}
+
+body.site-mode {
+  overflow: visible;
+}
+
+/* On html rather than body, because html is the scrolling element. The editor
+   cannot scroll at all, so there is nothing for this to interfere with. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---------- base ---------- */
+
+.site-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--site-text);
+  font-family: var(--site-font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.site-main {
+  flex: 1;
+}
+
+/* index.css defines no focus styles at all, so the site supplies its own. */
+.site-root :focus-visible {
+  outline: 2px solid var(--site-link);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.site-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- header ---------- */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--site-line);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  max-width: var(--site-max);
+  height: var(--site-header-h);
+  margin: 0 auto;
+  padding: 0 var(--site-gutter);
+}
+
+a.site-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--site-text);
+  font-family: var(--site-font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+a.site-logo:hover {
+  text-decoration: none;
+}
+
+/* Two caption lines in the brand colour — the same mark as the favicon. */
+.site-logo-mark {
+  position: relative;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--site-cta-bg);
+}
+
+.site-logo-mark::before,
+.site-logo-mark::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--site-cta-text);
+}
+
+.site-logo-mark::before {
+  top: 8px;
+  width: 14px;
+}
+
+.site-logo-mark::after {
+  top: 13px;
+  width: 9px;
+}
+
+.site-nav {
+  display: flex;
+  gap: 22px;
+  margin-right: auto;
+  font-size: 14px;
+}
+
+.site-nav a {
+  color: var(--site-dim);
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+/* ---------- buttons ---------- */
+
+.site-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--site-radius);
+  font-family: var(--site-font-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: filter 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.site-button-lg {
+  padding: 13px 22px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+a.site-button-primary {
+  background: var(--site-cta-bg);
+  color: var(--site-cta-text);
+}
+
+/* Brightening rather than darkening on hover: it keeps the contrast ratio with
+   the near-black label, where a darker fill would eat into it. */
+a.site-button-primary:hover {
+  filter: brightness(1.1);
+  text-decoration: none;
+}
+
+a.site-button-ghost {
+  border-color: var(--site-line);
+  color: var(--site-text);
+}
+
+a.site-button-ghost:hover {
+  border-color: var(--site-link);
+  color: var(--site-link);
+  text-decoration: none;
+}
+
+/* ---------- hero ---------- */
+
+.site-hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 56px;
+  align-items: center;
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 72px var(--site-gutter) 56px;
+}
+
+.site-eyebrow {
+  margin: 0 0 14px;
+  color: var(--site-link);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.site-hero h1 {
+  margin: 0 0 20px;
+  font-family: var(--site-font-display);
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.site-lede {
+  max-width: 60ch;
+  margin: 0 0 28px;
+  color: var(--site-dim);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.site-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.site-hero-note {
+  margin: 0;
+  color: var(--site-dim);
+  font-size: 13px;
+}
+
+.site-hero-visual {
+  display: flex;
+  justify-content: center;
+}
+
+.site-mock {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 16px;
+  width: 100%;
+  max-width: 330px;
+  aspect-ratio: 9 / 15;
+  padding: 20px;
+  border: 1px solid var(--site-line);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 80% at 25% 0%, var(--site-mock-glow), transparent 62%),
+    linear-gradient(165deg, var(--site-panel-2), var(--bg-input));
+  box-shadow: var(--site-shadow);
+}
+
+.site-mock-box {
+  padding: 14px 12px;
+  border: 1px dashed var(--site-line);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.site-mock-line {
+  margin: 0;
+  font-family: var(--site-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.site-mock-word {
+  color: var(--site-text);
+}
+
+/* The spoken word, as the editor draws it: recoloured and about 10% larger. */
+.site-mock-active {
+  color: var(--site-cta-bg);
+  font-size: 1.1em;
+}
+
+.site-mock-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+}
+
+.site-mock-clip {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--site-line);
+}
+
+.site-mock-clip-alt {
+  flex: 1.4;
+  background: var(--site-link);
+}
+
+/* ---------- hero carousel ----------
+   Takes over the hero slot from .site-mock once there are images in
+   src/assets/carousel/. Crossfade rather than a sliding track: no layout shift,
+   nothing to overflow at narrow widths, and no transform maths to get wrong. */
+
+.site-carousel {
+  width: 100%;
+  max-width: 330px;
+}
+
+.site-carousel-frame {
+  position: relative;
+  aspect-ratio: 9 / 15;
+  overflow: hidden;
+  border: 1px solid var(--site-line);
+  border-radius: 20px;
+  background: linear-gradient(165deg, var(--site-panel-2), var(--bg-input));
+  box-shadow: var(--site-shadow);
+}
+
+.site-carousel-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+.site-carousel-slide.is-active {
+  opacity: 1;
+}
+
+/* contain, not cover: a screenshot that is not exactly 9:15 is letterboxed
+   against the frame's own background rather than cropped. */
+.site-carousel-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.site-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.site-carousel-dots {
+  display: flex;
+  gap: 2px;
+}
+
+/* 24px hit area with an 8px dot drawn inside it — the visual size is what it
+   should be, the target is what a thumb can actually hit. */
+.site-carousel-dot {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.site-carousel-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--site-line);
+  transform: translate(-50%, -50%);
+  transition: background-color 120ms ease;
+}
+
+.site-carousel-dot:hover::before {
+  background: var(--site-dim);
+}
+
+.site-carousel-dot.is-active::before {
+  background: var(--site-cta-bg);
+}
+
+.site-carousel-toggle {
+  padding: 4px 10px;
+  border: 1px solid var(--site-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-dim);
+  font-family: var(--site-font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.site-carousel-toggle:hover {
+  border-color: var(--site-link);
+  color: var(--site-link);
+}
+
+/* Instantly rather than fading, for the same reason the carousel does not
+   advance on its own under this setting. */
+@media (prefers-reduced-motion: reduce) {
+  .site-carousel-slide {
+    transition: none;
+  }
+}
+
+/* ---------- badges ---------- */
+
+.site-badges {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 0 var(--site-gutter) 64px;
+  list-style: none;
+}
+
+.site-badges li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  border: 1px solid var(--site-line);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+}
+
+.site-badge-label {
+  font-family: var(--site-font-display);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.site-badge-detail {
+  color: var(--site-dim);
+  font-size: 13px;
+}
+
+/* ---------- sections ---------- */
+
+.site-section {
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 64px var(--site-gutter);
+  /* Keeps the sticky header from covering a section that was jumped to. */
+  scroll-margin-top: var(--site-header-h);
+}
+
+/* Full-bleed background with the content still on the same grid: max() pushes
+   the padding out to the page gutter once the viewport is wider than the
+   content column. */
+.site-section-alt {
+  max-width: none;
+  padding-right: max(var(--site-gutter), calc((100% - var(--site-max)) / 2 + var(--site-gutter)));
+  padding-left: max(var(--site-gutter), calc((100% - var(--site-max)) / 2 + var(--site-gutter)));
+  border-top: 1px solid var(--site-line);
+  border-bottom: 1px solid var(--site-line);
+  background: var(--site-panel);
+}
+
+.site-section h2 {
+  margin: 0 0 14px;
+  font-family: var(--site-font-display);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.site-section-lede {
+  max-width: 68ch;
+  margin: 0 0 36px;
+  color: var(--site-dim);
+  font-size: 16px;
+}
+
+/* ---------- feature grid ---------- */
+
+.site-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.site-card {
+  padding: 20px;
+  border: 1px solid var(--site-line);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+}
+
+.site-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.site-card p {
+  margin: 0;
+  color: var(--site-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---------- steps ---------- */
+
+.site-steps {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.site-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-left: 18px;
+  border-left: 2px solid var(--site-line);
+}
+
+.site-step-number {
+  padding-top: 2px;
+  min-width: 20px;
+  color: var(--site-cta-bg);
+  font-family: var(--site-font-display);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.site-steps h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.site-steps p {
+  margin: 0;
+  color: var(--site-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---------- privacy list ---------- */
+
+.site-privacy-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 22px 30px;
+  margin: 0;
+}
+
+.site-privacy-list dt {
+  margin-bottom: 6px;
+  font-family: var(--site-font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.site-privacy-list dd {
+  margin: 0;
+  color: var(--site-dim);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.site-privacy-list a {
+  color: var(--site-link);
+}
+
+/* ---------- comparison table ---------- */
+
+.site-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--site-line);
+  border-radius: var(--site-radius);
+}
+
+.site-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.site-table th,
+.site-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--site-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.site-table thead th {
+  background: var(--site-panel);
+  color: var(--site-dim);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-table tbody th {
+  font-weight: 600;
+}
+
+.site-table tbody td {
+  color: var(--site-dim);
+}
+
+.site-table td.site-cell-good {
+  color: var(--site-text);
+  font-weight: 500;
+}
+
+.site-table tbody tr:last-child th,
+.site-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.site-fineprint {
+  margin: 12px 0 0;
+  color: var(--site-dim);
+  font-size: 12.5px;
+}
+
+/* ---------- faq ---------- */
+
+.site-faq {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px 32px;
+}
+
+.site-faq article {
+  padding-top: 16px;
+  border-top: 1px solid var(--site-line);
+}
+
+.site-faq h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.site-faq p {
+  margin: 0;
+  color: var(--site-dim);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* ---------- closing cta ---------- */
+
+.site-cta-band {
+  padding: 72px var(--site-gutter);
+  border-top: 1px solid var(--site-line);
+  background: var(--site-panel);
+  text-align: center;
+}
+
+.site-cta-band h2 {
+  margin: 0 0 12px;
+  font-family: var(--site-font-display);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.site-cta-band p {
+  max-width: 54ch;
+  margin: 0 auto 26px;
+  color: var(--site-dim);
+  font-size: 16px;
+}
+
+/* ---------- prose (privacy, terms, contact) ---------- */
+
+.site-prose {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px var(--site-gutter) 72px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.site-prose h1 {
+  margin: 0 0 8px;
+  font-family: var(--site-font-display);
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.site-prose h2 {
+  margin: 40px 0 12px;
+  font-family: var(--site-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.site-prose h2:first-of-type {
+  margin-top: 28px;
+}
+
+.site-prose p {
+  margin: 0 0 16px;
+}
+
+.site-prose ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+
+.site-prose li {
+  margin-bottom: 8px;
+}
+
+.site-prose a {
+  color: var(--site-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.site-prose-center {
+  text-align: center;
+}
+
+.site-effective {
+  margin: 0 0 32px;
+  color: var(--site-dim);
+  font-size: 13px;
+}
+
+.site-callout {
+  margin: 0 0 28px;
+  padding: 16px 18px;
+  border: 1px solid var(--site-line);
+  border-left: 3px solid var(--site-link);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  font-size: 15px;
+}
+
+/* ---------- footer ---------- */
+
+.site-footer {
+  border-top: 1px solid var(--site-line);
+  background: var(--site-panel);
+  font-size: 14px;
+}
+
+.site-footer-inner {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 32px;
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 44px var(--site-gutter) 28px;
+}
+
+.site-footer-name {
+  margin: 0 0 8px;
+  font-family: var(--site-font-display);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.site-footer-tagline {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--site-dim);
+}
+
+.site-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.site-footer-heading {
+  margin: 0 0 12px;
+  color: var(--site-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-footer-col a {
+  color: var(--site-dim);
+  text-decoration: none;
+}
+
+.site-footer-col a:hover {
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.site-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 20px var(--site-gutter) 40px;
+  border-top: 1px solid var(--site-line);
+  color: var(--site-dim);
+  font-size: 12.5px;
+}
+
+.site-footer-bottom p {
+  margin: 0;
+}
+
+.site-footer-note {
+  max-width: 62ch;
+}
+
+/* ---------- narrow screens ----------
+   The editor is desktop-only; the marketing pages cannot be, and AdSense's
+   review checks mobile-friendliness. */
+
+@media (max-width: 960px) {
+  .site-hero {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-top: 48px;
+  }
+
+  .site-badges {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .site-footer-inner {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  /* The sections stay reachable by scrolling, and the footer repeats them. */
+  .site-nav {
+    display: none;
+  }
+
+  a.site-logo {
+    margin-right: auto;
+  }
+
+  .site-section,
+  .site-hero {
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+
+  .site-prose {
+    padding-top: 40px;
+  }
+
+  .site-footer-inner {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-badges {
+    grid-template-columns: 1fr;
+  }
+
+  .site-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .site-button-lg {
+    width: 100%;
+  }
+
+  .site-mock-line {
+    font-size: 19px;
+  }
+}

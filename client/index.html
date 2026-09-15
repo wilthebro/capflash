@@ -3,7 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Captioner — TikTok-style captions</title>
+    <title>[Product Name] — Free TikTok-style captions, generated in your browser</title>
+    <meta
+      name="description"
+      content="Free TikTok-style caption generator that runs entirely in your browser: no upload, no watermark, no account. Transcribe, style and burn captions into an MP4."
+    />
+    <meta name="theme-color" content="#141518" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!--
+      These are static on purpose: no social scraper runs JavaScript, so setting
+      them from the app would achieve nothing. The per-route <title> and
+      description are set at runtime, and the canonical is computed there too —
+      one index.html serves every route, so a static canonical would mark
+      /privacy and /terms as duplicates of this page.
+
+      TODO before launch: replace [Product Name] and the example.com origin
+      here, in src/site/config.ts, and in public/sitemap.xml.
+      There is no og:image yet — it needs a 1200x630 PNG, and pointing at a file
+      that does not exist is worse than having none.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="[Product Name]" />
+    <meta
+      property="og:title"
+      content="[Product Name] — Free TikTok-style captions, generated in your browser"
+    />
+    <meta
+      property="og:description"
+      content="Free TikTok-style caption generator that runs entirely in your browser: no upload, no watermark, no account. Transcribe, style and burn captions into an MP4."
+    />
+    <meta property="og:url" content="https://example.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="[Product Name] — Free TikTok-style captions, generated in your browser"
+    />
+    <meta
+      name="twitter:description"
+      content="Free TikTok-style caption generator that runs entirely in your browser: no upload, no watermark, no account."
+    />
+
+    <!--
+      AdSense site review looks for the loader in the served HTML, so paste the
+      snippet AdSense gives you here, uncommented and with your own client id:
+
+      <script async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+        crossorigin="anonymous"></script>
+
+      The ad rail injects this script itself when it is missing, so ads serve
+      either way — this is here so the review crawler finds it in the source.
+      You still need the ad unit itself: see "Ad rail" in README.md.
+    -->
   </head>
   <body>
     <div id="root"></div>

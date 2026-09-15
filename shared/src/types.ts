@@ -8,11 +8,23 @@ export interface Word {
   end: number; // seconds
 }
 
-/** Caption bounding box, in video pixels. */
+export type AlignX = 'left' | 'center' | 'right';
+export type AlignY = 'top' | 'middle' | 'bottom';
+
+/**
+ * Caption bounding box, in video pixels. The box is a fixed-height rectangle:
+ * `maxLines` sets its height in lines (so it does not resize caption to
+ * caption) and doubles as the page size — a segment wrapping to more lines than
+ * this shows them a page at a time as playback reaches them. The align fields
+ * place the text inside the box on both axes.
+ */
 export interface Box {
   x: number;
   y: number;
   width: number;
+  maxLines: number;
+  alignX: AlignX;
+  alignY: AlignY;
 }
 
 export type DisplayMode = 'word' | 'line' | 'highlight';
@@ -99,16 +111,22 @@ export interface ExportSegment {
  * One unit of time-visible caption text. Drives BOTH the preview overlay and
  * the generated ASS file — this list is the preview/export parity guarantee.
  *
- * In line/highlight mode `text` is the segment's whole wrapped block, with its
- * lines joined by '\n' (the overlay renders it with `white-space: pre-line`,
- * the ASS generator breaks it with `\N`); the spans then index into that block.
+ * In line/highlight mode `text` is one *page* of the segment's wrapped block —
+ * up to `box.maxLines` lines joined by '\n' (the overlay renders it with
+ * `white-space: pre`, the ASS generator breaks it with `\N`); the spans index
+ * into that page. Every page of a segment shares the same `x`, and the same `y`
+ * unless a short page is being placed by `alignY`, so turning a page replaces
+ * the text at a fixed position rather than moving it.
  */
 export interface DisplayEvent {
   start: number;
   end: number;
   text: string;
-  x: number; // top-center anchor X, video px
-  y: number; // top Y, video px
+  x: number; // anchor X, video px — box left edge (block modes) or word center (word mode)
+  y: number; // top Y of the visible page, video px
+  /** Box width: the overlay lays block-mode text out across it using `alignX`. */
+  boxWidth: number;
+  alignX: AlignX;
   words: { charStart: number; charEnd: number; highlighted: boolean }[];
   style: SegmentStyle;
   mode: DisplayMode;

@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { initBundledFonts } from './lib/bundledFonts';
 import { useEditorStore } from './store/editorStore';
 import './index.css';
+import './site.css';
 
 // Kick off before the first render so the default font is measuring correctly
 // as early as possible. The store bump lands the faces through the existing

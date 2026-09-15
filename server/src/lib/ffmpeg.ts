@@ -10,13 +10,18 @@ export interface FfmpegInfo {
   whisper: boolean;
 }
 
+export const FFMPEG_BIN = process.env.FFMPEG_BIN ?? 'ffmpeg';
+
 let cached: FfmpegInfo | null = null;
 
 /** Probe the ffmpeg binary once per process. */
 export async function probeFfmpeg(): Promise<FfmpegInfo> {
   if (cached) return cached;
   try {
-    const { stdout } = await execFileAsync('ffmpeg', ['-version'], { timeout: 10_000 });
+    // Probe the binary that will actually be spawned, not a hardcoded 'ffmpeg':
+    // with FFMPEG_BIN set the two used to disagree, so health could report a
+    // working ffmpeg while renders ran something else (or nothing).
+    const { stdout } = await execFileAsync(FFMPEG_BIN, ['-version'], { timeout: 10_000 });
     cached = {
       found: true,
       version: stdout.split('\n')[0] ?? '',
@@ -28,8 +33,6 @@ export async function probeFfmpeg(): Promise<FfmpegInfo> {
   }
   return cached;
 }
-
-export const FFMPEG_BIN = process.env.FFMPEG_BIN ?? 'ffmpeg';
 
 /**
  * Escape a Windows path for use inside an ffmpeg filter argument: forward

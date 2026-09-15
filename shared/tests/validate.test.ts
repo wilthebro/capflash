@@ -3,6 +3,7 @@ import { resolveSegmentLayout } from '../src/layout';
 import { DEFAULT_BOX, DEFAULT_STYLE } from '../src/style';
 import type { Segment } from '../src/types';
 import { ProjectSchema, RenderSpecSchema } from '../src/validate';
+import { makeBox } from './helpers';
 
 /** The default style as an old (pre-weight) project file would have written it. */
 const { fontWeight: _dropped, ...styleWithoutWeight } = DEFAULT_STYLE;
@@ -36,8 +37,17 @@ describe('ProjectSchema', () => {
   });
 
   it('still accepts a segment with its own box', () => {
-    const parsed = ProjectSchema.parse(project([segment({ box: { x: 1, y: 2, width: 3 } })]));
-    expect(parsed.segments[0]!.box).toEqual({ x: 1, y: 2, width: 3 });
+    const parsed = ProjectSchema.parse(project([segment({ box: makeBox(1, 2, 3) })]));
+    expect(parsed.segments[0]!.box).toEqual(makeBox(1, 2, 3));
+  });
+
+  it('fills in the box height and alignment for files saved before they existed', () => {
+    // `as never`: a box as an old project file would have written it, which the
+    // current Box type no longer accepts. Parsing must supply the defaults, so
+    // such a file opens as the 2-line, centred, top-anchored box it was drawn as.
+    const legacy = { x: 1, y: 2, width: 3 } as never;
+    const parsed = ProjectSchema.parse(project([segment({ box: legacy })]));
+    expect(parsed.segments[0]!.box).toEqual(makeBox(1, 2, 3));
   });
 
   it('defaults a missing fontWeight to 400 so old projects keep their look', () => {
@@ -54,7 +64,13 @@ describe('ProjectSchema', () => {
   });
 
   it('rejects a non-positive box width', () => {
-    expect(ProjectSchema.safeParse(project([segment({ box: { x: 0, y: 0, width: 0 } })])).success).toBe(false);
+    const zeroWidth = makeBox(0, 0, 0);
+    expect(ProjectSchema.safeParse(project([segment({ box: zeroWidth })])).success).toBe(false);
+  });
+
+  it('rejects a box with no lines in it', () => {
+    const empty = makeBox(0, 0, 100, { maxLines: 0 });
+    expect(ProjectSchema.safeParse(project([segment({ box: empty })])).success).toBe(false);
   });
 });
 

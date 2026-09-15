@@ -1,5 +1,6 @@
 import type { DisplayMode } from '@captioner/shared';
 import { useEditorStore } from '../store/editorStore';
+import { BoxFields } from './BoxFields';
 import { StyleFields } from './StyleFields';
 
 const MODES: { value: DisplayMode; label: string }[] = [
@@ -8,11 +9,15 @@ const MODES: { value: DisplayMode; label: string }[] = [
   { value: 'highlight', label: 'Line + highlight' },
 ];
 
-/** Vertical presets as a fraction of video height, measured at the box's top edge. */
+/**
+ * Whole-frame placements, as a fraction of video height at the box's top edge.
+ * Named for the band of the frame they drop the box into — the box's own
+ * left/centre/right and top/middle/bottom setting is the Text position grid.
+ */
 const VERTICAL_PRESETS = [
-  { label: 'Top', frac: 0.06 },
-  { label: 'Middle', frac: 0.42 },
-  { label: 'Bottom', frac: 0.72 },
+  { label: 'Upper', frac: 0.06 },
+  { label: 'Center', frac: 0.42 },
+  { label: 'Lower', frac: 0.72 },
 ];
 
 /** Defaults for new segments, with an apply-to-all action and the global box. */
@@ -62,33 +67,7 @@ export function StylePanel() {
           ))}
         </div>
       )}
-      <div className="field-row">
-        <div className="field">
-          <span className="field-label">Box X</span>
-          <input
-            type="number"
-            value={Math.round(defaultBox.x)}
-            onChange={(e) => updateDefaultBox({ x: Math.max(0, Number(e.target.value) || 0) })}
-          />
-        </div>
-        <div className="field">
-          <span className="field-label">Box Y</span>
-          <input
-            type="number"
-            value={Math.round(defaultBox.y)}
-            onChange={(e) => updateDefaultBox({ y: Math.max(0, Number(e.target.value) || 0) })}
-          />
-        </div>
-        <div className="field">
-          <span className="field-label">Box width</span>
-          <input
-            type="number"
-            min={40}
-            value={Math.round(defaultBox.width)}
-            onChange={(e) => updateDefaultBox({ width: Math.max(40, Number(e.target.value) || 40) })}
-          />
-        </div>
-      </div>
+      <BoxFields box={defaultBox} onChange={updateDefaultBox} />
       <button
         className="button"
         disabled={segmentCount === 0}

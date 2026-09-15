@@ -16,8 +16,25 @@ export const DEFAULT_STYLE: SegmentStyle = {
   highlightColor: '#FFD400',
 };
 
-/** Centered near the bottom of a 1080x1920 portrait video (TikTok-style placement). */
-export const DEFAULT_BOX: Box = { x: 120, y: 1420, width: 840 };
+/** Hard ceiling on the box's line count — shared by the drag handle and the Lines control. */
+export const MAX_LINES = 8;
+
+/** Box height in lines out of the box: two stacked lines, with longer segments paging. */
+export const DEFAULT_MAX_LINES = 2;
+
+/**
+ * Centered near the bottom of a 1080x1920 portrait video (TikTok-style
+ * placement). `center`/`top` alignment reproduces the original look exactly, so
+ * projects created before the box had alignment render unchanged.
+ */
+export const DEFAULT_BOX: Box = {
+  x: 120,
+  y: 1420,
+  width: 840,
+  maxLines: DEFAULT_MAX_LINES,
+  alignX: 'center',
+  alignY: 'top',
+};
 
 /**
  * The spoken word in 'highlight' mode is drawn slightly larger and at least

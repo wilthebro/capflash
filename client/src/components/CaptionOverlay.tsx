@@ -28,12 +28,18 @@ function CaptionEventView({ event }: { event: DisplayEvent }) {
   const { style } = event;
   const outline =
     style.outlineWidth > 0 ? `${style.outlineWidth}px ${style.outlineColor}` : undefined;
+  const isWord = event.mode === 'word';
   return (
     <div
-      className="caption-event"
+      // Word mode is a single word pinned at its own centre; line/highlight
+      // mode is a page laid out across the box, so it takes the box's width
+      // and lets text-align place each line within it.
+      className={`caption-event${isWord ? ' is-word' : ''}`}
       style={{
         left: event.x,
         top: event.y,
+        width: isWord ? undefined : event.boxWidth,
+        textAlign: isWord ? undefined : event.alignX,
         fontFamily: `"${style.fontFamily}", sans-serif`,
         fontSize: style.fontSize,
         fontWeight: style.fontWeight,
@@ -51,7 +57,6 @@ function CaptionEventView({ event }: { event: DisplayEvent }) {
         // would instead scale with the enlarged highlight word and push the
         // lines below it down for as long as that word is highlighted.
         lineHeight: `${style.fontSize * LINE_HEIGHT}px`,
-        textAlign: 'center',
       }}
     >
       {event.mode === 'highlight' ? <HighlightedText event={event} /> : event.text}

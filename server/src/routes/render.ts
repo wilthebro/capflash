@@ -6,6 +6,7 @@ import multer from 'multer';
 import { RenderSpecSchema, type RenderSpec } from '@captioner/shared';
 import { JOBS_DIR, MAX_SPEC_BYTES, MAX_VIDEO_BYTES } from '../config';
 import { createJob, getJob, setJob } from '../lib/jobs';
+import { probeFfmpeg } from '../lib/ffmpeg';
 import { getRenderer } from '../lib/renderers/types';
 
 export const renderRouter = Router();
@@ -28,6 +29,25 @@ const upload = multer({
   // fieldSize applies to the `spec` form field, not the video: multer's 1 MB
   // default is smaller than a spec carrying the embedded caption fonts.
   limits: { fileSize: MAX_VIDEO_BYTES, files: 1, fieldSize: MAX_SPEC_BYTES },
+});
+
+/**
+ * Refuse before the body is read. Without this a server with no usable ffmpeg
+ * still accepted the upload — up to MAX_VIDEO_BYTES of it — and only failed
+ * once the render ran, so the client waited on a whole file transfer to learn
+ * something answerable in milliseconds.
+ */
+renderRouter.use(async (_req, res, next) => {
+  const ff = await probeFfmpeg();
+  if (!ff.found) {
+    res.status(503).json({ error: 'This server has no ffmpeg on PATH, so it cannot render.' });
+    return;
+  }
+  if (!ff.libass) {
+    res.status(503).json({ error: 'This server’s ffmpeg was built without libass, so it cannot burn captions in.' });
+    return;
+  }
+  next();
 });
 
 renderRouter.post('/', upload.single('video'), async (req, res) => {

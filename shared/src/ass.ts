@@ -41,6 +41,20 @@ export function assOutlineUnits(outlineWidthPx: number, playResY: number): numbe
 const round1 = (n: number): string => String(Math.round(n * 10) / 10);
 
 /**
+ * The `\pos` anchor and `\an` code for an event. Word mode draws a single word
+ * centred on its own centre. Line/highlight mode draws a page of lines that the
+ * box's `alignX` places — which is exactly what `\an7`/`\an8`/`\an9` mean, so
+ * the box's alignment travels into the export as the line's own alignment
+ * instead of every line being centred on one point.
+ */
+function anchorFor(e: DisplayEvent): { x: number; an: number } {
+  if (e.mode === 'word') return { x: e.x, an: 8 };
+  if (e.alignX === 'left') return { x: e.x, an: 7 }; // event x is the box's left edge
+  if (e.alignX === 'right') return { x: e.x + e.boxWidth, an: 9 };
+  return { x: e.x + e.boxWidth / 2, an: 8 };
+}
+
+/**
  * Build the Text field for one event, breaking wrapped blocks into lines and
  * inserting override tags at the flagged spans.
  *
@@ -62,13 +76,14 @@ function buildEventText(e: DisplayEvent): string {
   const hlSize = highlightFontSize(style.fontSize);
   const baseBold = style.fontWeight >= 700 ? 1 : 0;
   const isHighlight = e.mode === 'highlight';
+  const { x: ax, an } = anchorFor(e);
 
   let out = '';
   let lineStart = 0;
   e.text.split('\n').forEach((line, i) => {
     if (i > 0) {
       const y = e.y + i * style.fontSize * LINE_HEIGHT;
-      out += `\\N{\\pos(${round1(e.x)},${round1(y)})\\an8}`;
+      out += `\\N{\\pos(${round1(ax)},${round1(y)})\\an${an}}`;
     }
     const esc = escapeAssText(line);
     if (!isHighlight) {
@@ -156,7 +171,8 @@ export function generateAss(spec: RenderSpec): string {
   out.push('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text');
   for (const { e } of allEvents) {
     const name = styleNameOf(e.style);
-    const prefix = `{\\pos(${round1(e.x)},${round1(e.y)})\\an8}`;
+    const { x: ax, an } = anchorFor(e);
+    const prefix = `{\\pos(${round1(ax)},${round1(e.y)})\\an${an}}`;
     out.push(
       `Dialogue: 0,${assTimestamp(e.start)},${assTimestamp(e.end, true)},${name},,0,0,0,,${prefix}${buildEventText(e)}`,
     );

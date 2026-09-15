@@ -1,0 +1,7 @@
+# Authorized Digital Sellers. Replace pub-XXXXXXXXXXXXXXXX with your own
+# publisher id — this is the "pub-" value from AdSense, without the "ca-" prefix
+# that the script tag uses. The trailing hash is Google's certification
+# authority id and is the same for every publisher.
+#
+# Without this file at the domain root, AdSense serves reduced demand.
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

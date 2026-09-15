@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { eventsForSegment, resolveSegmentLayout } from '../src/layout';
-import { DEFAULT_BOX, DEFAULT_STYLE, highlightFontSize, highlightFontWeight } from '../src/style';
+import { DEFAULT_BOX, DEFAULT_STYLE, highlightFontSize, highlightFontWeight, LINE_HEIGHT } from '../src/style';
 import type { Box, Segment, Word } from '../src/types';
+import { makeBox } from './helpers';
 
 const word = (id: string, text: string, start: number, end: number): Word => ({ id, text, start, end });
 // 40px per char at the default 64px style.
@@ -19,22 +20,24 @@ const makeSeg = (box?: Box): Segment => ({
 
 describe('resolveSegmentLayout box resolution', () => {
   it('follows the default box when the segment has none', () => {
-    const box: Box = { x: 100, y: 1400, width: 800 };
+    const box: Box = makeBox(100, 1400, 800);
     const layout = resolveSegmentLayout(makeSeg(), [word('w1', 'hello', 0, 0.5)], measure, box);
     expect(layout.box).toEqual(box);
     expect(layout.lines[0]!.centerX).toBe(100 + 800 / 2);
     expect(layout.lines[0]!.topY).toBe(1400);
-    expect(layout.events[0]!.x).toBe(500);
+    // Block-mode events anchor on the box's left edge and are laid out across
+    // its width, so the overlay and the ASS export both honour alignX.
+    expect(layout.events[0]!.x).toBe(100);
     expect(layout.events[0]!.y).toBe(1400);
   });
 
   it('lets an explicit segment box win over the default', () => {
-    const own: Box = { x: 0, y: 0, width: 400 };
+    const own: Box = makeBox(0, 0, 400);
     const layout = resolveSegmentLayout(
       makeSeg(own),
       [word('w1', 'hello', 0, 0.5)],
       measure,
-      { x: 100, y: 1400, width: 800 },
+      makeBox(100, 1400, 800),
     );
     expect(layout.box).toEqual(own);
     expect(layout.lines[0]!.centerX).toBe(200);
@@ -44,8 +47,8 @@ describe('resolveSegmentLayout box resolution', () => {
   it('wraps against the resolved box width, not a stale one', () => {
     // "hello there" is 11 chars = 440px: fits a 500px box, not a 400px one.
     const words = [word('w1', 'hello', 0, 0.25), word('w2', 'there', 0.25, 0.5)];
-    const wide = resolveSegmentLayout(makeSeg(), words, measure, { x: 0, y: 0, width: 500 });
-    const narrow = resolveSegmentLayout(makeSeg(), words, measure, { x: 0, y: 0, width: 400 });
+    const wide = resolveSegmentLayout(makeSeg(), words, measure, makeBox(0, 0, 500));
+    const narrow = resolveSegmentLayout(makeSeg(), words, measure, makeBox(0, 0, 400));
     expect(wide.lines).toHaveLength(1);
     expect(narrow.lines).toHaveLength(2);
   });
@@ -93,7 +96,7 @@ describe('eventsForSegment clipping', () => {
 describe('eventsForSegment wrapped blocks', () => {
   // "hello there" is 11 chars = 440px: wraps to two lines in a 400px box.
   const seq = [word('w1', 'hello', 0, 0.5), word('w2', 'there', 0.5, 1)];
-  const box: Box = { x: 100, y: 1400, width: 400 };
+  const box: Box = makeBox(100, 1400, 400);
   const make = (mode: 'line' | 'highlight' | 'word', end = 1) => {
     const seg: Segment = { ...makeSeg(box), id: 's1', mode, start: 0, end, wordIds: ['w1', 'w2'] };
     const layout = resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX);
@@ -106,7 +109,7 @@ describe('eventsForSegment wrapped blocks', () => {
     expect(events).toHaveLength(2);
     for (const e of events) {
       expect(e.text).toBe('hello\nthere');
-      expect(e.x).toBe(300); // shared box centerX, not a per-line center
+      expect(e.x).toBe(100); // the box's left edge — the block is laid out across it
       expect(e.y).toBe(1400); // box.y — NOT the second line's topY
       expect(e.words).toEqual([
         { charStart: 0, charEnd: 5, highlighted: false },
@@ -134,6 +137,128 @@ describe('eventsForSegment wrapped blocks', () => {
     expect(events[0]!.x).toBe(layout.lines[0]!.words[0]!.centerX);
     expect(events[0]!.y).toBe(1400);
     expect(events[1]!.y).toBe(layout.lines[1]!.topY);
+  });
+});
+
+describe('box paging', () => {
+  // Three 5-char words at 40px/char in a 400px box: each word takes its own line.
+  const seq = [
+    word('w1', 'hello', 0, 0.5),
+    word('w2', 'there', 0.5, 1),
+    word('w3', 'world', 1, 1.5),
+  ];
+  const make = (over: Partial<Box>, mode: 'line' | 'highlight' | 'word' = 'line') => {
+    const seg: Segment = {
+      ...makeSeg(makeBox(100, 1400, 400, over)),
+      mode,
+      start: 0,
+      end: 1.5,
+      wordIds: ['w1', 'w2', 'w3'],
+    };
+    const layout = resolveSegmentLayout(seg, seq, measure, DEFAULT_BOX);
+    return { layout, events: eventsForSegment(seg, layout) };
+  };
+
+  it('shows only the page a word is on, with every page anchored in place', () => {
+    const { layout, events } = make({ maxLines: 2 });
+    expect(layout.lines).toHaveLength(3);
+    expect(events.map((e) => e.text)).toEqual(['hello\nthere', 'hello\nthere', 'world']);
+    // One anchor shared by every page: turning the page swaps the text in
+    // place rather than moving it, which is what stops the caption jumping.
+    for (const e of events) {
+      expect(e.x).toBe(100);
+      expect(e.y).toBe(1400);
+    }
+    // The third line is its own page, so its event carries only that line.
+    expect(events[2]!.words).toEqual([{ charStart: 0, charEnd: 5, highlighted: false }]);
+  });
+
+  it('pages one line at a time when the box is one line tall', () => {
+    const { events } = make({ maxLines: 1 });
+    expect(events.map((e) => e.text)).toEqual(['hello', 'there', 'world']);
+    for (const e of events) expect(e.y).toBe(1400);
+  });
+
+  it('flags the spoken word on the page it is on', () => {
+    const { events } = make({ maxLines: 2 }, 'highlight');
+    expect(events[0]!.words).toEqual([
+      { charStart: 0, charEnd: 5, highlighted: true },
+      { charStart: 6, charEnd: 11, highlighted: false },
+    ]);
+    // On the second page the offsets restart at the page's own text.
+    expect(events[2]!.words).toEqual([{ charStart: 0, charEnd: 5, highlighted: true }]);
+  });
+
+  it('never leaves two pages showing at once', () => {
+    // Overlapping word timings (a Whisper chunk overlap, a hand-edited time)
+    // would otherwise leave both pages active together, so the overlay would
+    // paint one page's text on top of the other's.
+    const overlapping = [word('w1', 'hello', 0, 1.2), word('w2', 'there', 1.0, 1.5)];
+    const seg: Segment = {
+      ...makeSeg(makeBox(100, 1400, 400, { maxLines: 1 })),
+      mode: 'line',
+      start: 0,
+      end: 2,
+      wordIds: ['w1', 'w2'],
+    };
+    const events = eventsForSegment(
+      seg,
+      resolveSegmentLayout(seg, overlapping, measure, DEFAULT_BOX),
+    );
+    expect(events.map((e) => [e.text, e.start, e.end])).toEqual([
+      ['hello', 0, 1.0], // cut at the page turn, though its word runs to 1.2
+      ['there', 1.0, 2],
+    ]);
+  });
+
+  it('places each word on its own page in word mode', () => {
+    // Word mode draws one word at its line's position, so it follows the page
+    // geometry too: line 3 is the first line of page 2, back at the box top.
+    const { events } = make({ maxLines: 2 }, 'word');
+    expect(events.map((e) => e.text)).toEqual(['hello', 'there', 'world']);
+    expect(events.map((e) => e.y)).toEqual([1400, 1400 + 64 * LINE_HEIGHT, 1400]);
+  });
+
+  it('holds a page through the pause that follows its last word', () => {
+    const paused = [word('w1', 'hello', 0, 0.5), word('w2', 'there', 1.0, 1.5)];
+    const seg: Segment = {
+      ...makeSeg(makeBox(100, 1400, 400, { maxLines: 1 })),
+      mode: 'line',
+      start: 0,
+      end: 2,
+      wordIds: ['w1', 'w2'],
+    };
+    const events = eventsForSegment(seg, resolveSegmentLayout(seg, paused, measure, DEFAULT_BOX));
+    // The first page stays up across the gap instead of blanking out.
+    expect(events.map((e) => [e.start, e.end])).toEqual([
+      [0, 1.0],
+      [1.0, 2],
+    ]);
+    expect(events.map((e) => e.text)).toEqual(['hello', 'there']);
+  });
+});
+
+describe('box alignment', () => {
+  // "hi" is 2 chars = 80px, so its line is much narrower than the 400px box.
+  const words = [word('w1', 'hi', 0, 0.5)];
+  const layoutOf = (over: Partial<Box>) =>
+    resolveSegmentLayout(makeSeg(makeBox(100, 1400, 400, over)), words, measure, DEFAULT_BOX);
+
+  it('anchors a line to the box edge for alignX left and right', () => {
+    expect(layoutOf({ alignX: 'left' }).lines[0]!.centerX).toBe(140); // left edge at box.x
+    expect(layoutOf({}).lines[0]!.centerX).toBe(300); // box centre (the default)
+    expect(layoutOf({ alignX: 'right' }).lines[0]!.centerX).toBe(460); // right edge at box.x + width
+    // Word mode sits on the same line box, so it follows the alignment too.
+    expect(layoutOf({ alignX: 'left' }).lines[0]!.words[0]!.centerX).toBe(140);
+  });
+
+  it('sinks a short page within the box for alignY middle and bottom', () => {
+    const lineHeight = DEFAULT_STYLE.fontSize * LINE_HEIGHT;
+    // The box is two lines tall but the caption only fills one, so there is a
+    // line's worth of slack to distribute.
+    expect(layoutOf({}).lines[0]!.topY).toBe(1400);
+    expect(layoutOf({ alignY: 'middle' }).lines[0]!.topY).toBe(1400 + lineHeight / 2);
+    expect(layoutOf({ alignY: 'bottom' }).lines[0]!.topY).toBe(1400 + lineHeight);
   });
 });
 

@@ -8,7 +8,8 @@ import {
 } from '../src/ass';
 import { eventsForSegment, resolveSegmentLayout } from '../src/layout';
 import { DEFAULT_BOX } from '../src/style';
-import type { ExportSegment, RenderSpec, Segment, SegmentStyle } from '../src/types';
+import type { Box, ExportSegment, RenderSpec, Segment, SegmentStyle } from '../src/types';
+import { makeBox } from './helpers';
 
 const styleA: SegmentStyle = {
   fontFamily: 'Arial',
@@ -69,7 +70,7 @@ describe('generateAss', () => {
       end: 1.0,
       mode: 'word',
       style: styleA,
-      box: { x: 100, y: 1400, width: 800 },
+      box: makeBox(100, 1400, 800),
     };
     const seg2: Segment = {
       id: 's2',
@@ -78,7 +79,7 @@ describe('generateAss', () => {
       end: 2.5,
       mode: 'highlight',
       style: styleB,
-      box: { x: 0, y: 0, width: 500 },
+      box: makeBox(0, 0, 500),
     };
     const words = [
       { id: 'w1', text: 'hello', start: 0, end: 0.5 },
@@ -132,7 +133,7 @@ Dialogue: 0,0:00:02.00,0:00:02.50,st1,,0,0,0,,{\\pos(250,0)\\an8}bye {\\c&H00FFF
       end: 1,
       mode: 'highlight',
       style: styleA,
-      box: { x: 0, y: 0, width: 800 },
+      box: makeBox(0, 0, 800),
     };
     const word = { id: 'w1', text: 'loud', start: 0, end: 1 };
     const layout = resolveSegmentLayout(seg, [word], (t) => t.length * 40, DEFAULT_BOX);
@@ -155,7 +156,7 @@ Dialogue: 0,0:00:02.00,0:00:02.50,st1,,0,0,0,,{\\pos(250,0)\\an8}bye {\\c&H00FFF
       end: 1,
       mode: 'word',
       style: { ...styleA, fontWeight: weight, highlightColor: highlight },
-      box: { x: 0, y: 0, width: 800 },
+      box: makeBox(0, 0, 800),
     });
     const word = { id: 'w1', text: 'hi', start: 0, end: 1 };
     const segs = [make(700, '#FFD400'), make(800, '#FFD400'), make(700, '#00FF00')];
@@ -181,7 +182,7 @@ describe('generateAss with a wrapped block', () => {
     end: 1,
     mode,
     style: styleA,
-    box: { x: 100, y: 1400, width: 400 },
+    box: makeBox(100, 1400, 400),
   });
   const words = [
     { id: 'w1', text: 'hello', start: 0, end: 0.5 },
@@ -221,5 +222,60 @@ describe('generateAss with a wrapped block', () => {
     expect(dialogues[1]).toBe(
       'Dialogue: 0,0:00:00.50,0:00:01.00,st0,,0,0,0,,{\\pos(300,1400)\\an8}hello\\N{\\pos(300,1476.8)\\an8}{\\c&H0000D4FF\\b1\\fs70}there{\\c&H00FFFFFF\\b1\\fs64}',
     );
+  });
+});
+
+describe('generateAss with paging', () => {
+  // Three 5-char words at 40px/char in a 400px box: one word per line.
+  const pagedWords = [
+    { id: 'w1', text: 'hello', start: 0, end: 0.5 },
+    { id: 'w2', text: 'there', start: 0.5, end: 1 },
+    { id: 'w3', text: 'world', start: 1, end: 1.5 },
+  ];
+  const dialoguesFor = (box: Box): string[] => {
+    const seg: Segment = {
+      id: 's1',
+      wordIds: ['w1', 'w2', 'w3'],
+      start: 0,
+      end: 1.5,
+      mode: 'line',
+      style: styleA,
+      box,
+    };
+    const layout: ExportSegment = resolveSegmentLayout(
+      seg,
+      pagedWords,
+      (t) => t.length * 40,
+      DEFAULT_BOX,
+    );
+    const spec: RenderSpec = {
+      version: 1,
+      renderer: 'ass',
+      video: { name: 't.mp4', duration: 1.5, width: 1080, height: 1920 },
+      segments: [layout],
+      fonts: [],
+      output: { videoCodec: 'libx264', crf: 18, preset: 'veryfast', audioCodec: 'aac', audioBitrate: '192k' },
+    };
+    return generateAss(spec).split('\n').filter((l) => l.startsWith('Dialogue:'));
+  };
+
+  it('writes one dialogue per page, every page anchored on the same spot', () => {
+    // The export has to page exactly like the preview does: the third line
+    // replaces the first two at the same position rather than being stacked
+    // under them.
+    expect(dialoguesFor(makeBox(100, 1400, 400, { maxLines: 2 }))).toEqual([
+      'Dialogue: 0,0:00:00.00,0:00:00.50,st0,,0,0,0,,{\\pos(300,1400)\\an8}hello\\N{\\pos(300,1476.8)\\an8}there',
+      'Dialogue: 0,0:00:00.50,0:00:01.00,st0,,0,0,0,,{\\pos(300,1400)\\an8}hello\\N{\\pos(300,1476.8)\\an8}there',
+      'Dialogue: 0,0:00:01.00,0:00:01.50,st0,,0,0,0,,{\\pos(300,1400)\\an8}world',
+    ]);
+  });
+
+  it('carries the box alignment into the anchor code', () => {
+    const [left] = dialoguesFor(makeBox(100, 1400, 400, { maxLines: 1, alignX: 'left' }));
+    const [right] = dialoguesFor(makeBox(100, 1400, 400, { maxLines: 1, alignX: 'right' }));
+    // \an7 sits the block's left edge on the box's left edge, \an9 its right
+    // edge on the box's right edge — the same place the preview puts the line.
+    expect(left).toContain('{\\pos(100,1400)\\an7}hello');
+    expect(right).toContain('{\\pos(500,1400)\\an9}hello');
   });
 });

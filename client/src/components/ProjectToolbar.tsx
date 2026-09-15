@@ -1,13 +1,15 @@
 import { loadProjectFromFile, saveProjectToFile } from '../lib/project';
+import { Link } from '../lib/router';
 import { useEditorStore } from '../store/editorStore';
 
 interface Props {
   onExport: () => void;
   onTranscribe: () => void;
   onEditTranscript: () => void;
+  onHelp: () => void;
 }
 
-export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript }: Props) {
+export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript, onHelp }: Props) {
   const projectName = useEditorStore((s) => s.projectName);
   const setProjectName = useEditorStore((s) => s.setProjectName);
   const loadVideo = useEditorStore((s) => s.loadVideo);
@@ -79,7 +81,11 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript }: Pro
 
   return (
     <header className="toolbar">
-      <span className="app-title">🎬 Captioner</span>
+      {/* A router link, not a bare <a href="/">: the editor's store is in memory
+          only, so a full document load here would silently drop the project. */}
+      <Link to="/" className="app-title" title="Back to the home page">
+        🎬 Captioner
+      </Link>
       <input
         type="text"
         className="project-name"
@@ -129,6 +135,9 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript }: Pro
       </button>
       <button className="button ghost" onClick={onNew} title="Start over">
         New
+      </button>
+      <button className="button ghost" onClick={onHelp} title="How to use Captioner">
+        Help
       </button>
       {notices.length > 0 && (
         <div className="toasts">

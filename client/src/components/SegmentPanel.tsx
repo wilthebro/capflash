@@ -1,5 +1,6 @@
 import type { DisplayMode } from '@captioner/shared';
 import { useEditorStore } from '../store/editorStore';
+import { BoxFields } from './BoxFields';
 import { StyleFields } from './StyleFields';
 
 const MODES: { value: DisplayMode; label: string }[] = [
@@ -74,44 +75,13 @@ export function SegmentPanel() {
         style={seg.style}
         onChange={(patch) => updateSegment(seg.id, { style: { ...seg.style, ...patch } })}
       />
-      <div className="field-row">
-        <div className="field">
-          <span className="field-label">Box X</span>
-          <input
-            type="number"
-            value={Math.round(box.x)}
-            onChange={(e) =>
-              updateSegment(seg.id, { box: { ...box, x: Math.max(0, Number(e.target.value) || 0) } })
-            }
-          />
-        </div>
-        <div className="field">
-          <span className="field-label">Box Y</span>
-          <input
-            type="number"
-            value={Math.round(box.y)}
-            onChange={(e) =>
-              updateSegment(seg.id, { box: { ...box, y: Math.max(0, Number(e.target.value) || 0) } })
-            }
-          />
-        </div>
-        <div className="field">
-          <span className="field-label">Box width</span>
-          <input
-            type="number"
-            min={40}
-            value={Math.round(box.width)}
-            onChange={(e) =>
-              updateSegment(seg.id, {
-                box: { ...box, width: Math.max(40, Number(e.target.value) || 40) },
-              })
-            }
-          />
-        </div>
-      </div>
+      <BoxFields
+        box={box}
+        onChange={(patch) => updateSegment(seg.id, { box: { ...box, ...patch } })}
+      />
       <p className="panel-hint">
         {linked
-          ? 'This caption follows the global box — dragging it here pins its own position.'
+          ? 'This caption follows the global box — moving, resizing or aligning it here pins its own box.'
           : 'This caption has its own box, so the global box no longer moves it.'}
       </p>
       <div className="button-row">
