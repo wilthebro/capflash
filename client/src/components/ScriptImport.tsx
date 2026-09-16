@@ -8,8 +8,8 @@ interface Props {
 /**
  * Plaintext script import: the script's own line breaks define caption
  * segments, overriding period-based splitting. Word timestamps come from the
- * transcript — either a loaded JSON file or Whisper's own transcription, so a
- * script can be used with no JSON transcript at all.
+ * transcript — Whisper's own transcription — so a script only supplies the line
+ * breaks, never the timing.
  */
 export function ScriptImport({ onTranscribe }: Props) {
   const importScript = useEditorStore((s) => s.importScript);
@@ -65,7 +65,7 @@ export function ScriptImport({ onTranscribe }: Props) {
         <p className="panel-hint">
           {hasVideo
             ? 'No transcript yet. Paste your script, then transcribe the video: Whisper supplies the word timings and this script defines the caption lines.'
-            : 'Load a video, then transcribe it to get word timings — or load a transcript JSON.'}
+            : 'Load a video, then transcribe it to get word timings.'}
         </p>
       )}
       {result && (

@@ -1,4 +1,3 @@
-import { HeroCarousel } from '../components/HeroCarousel';
 import { SiteLayout } from '../components/SiteLayout';
 import { Link } from '../lib/router';
 import { site } from '../site/config';
@@ -90,13 +89,21 @@ export function Landing() {
             </a>
           </div>
           <p className="site-hero-note">
-            Nothing to download. Your video stays on your device unless you ask for the faster
-            server render.
+            Nothing to download, and nothing uploaded. Your video never leaves your device — your
+            own browser burns the captions in.
           </p>
         </div>
 
         <div className="site-hero-visual">
-          <HeroCarousel />
+          {/* Eager and high priority: this is the largest paint above the fold.
+              No width/height — the frame's aspect-ratio reserves the space. */}
+          <img
+            className="site-hero-image"
+            src={site.heroImage.src}
+            alt={site.heroImage.alt}
+            fetchPriority="high"
+            decoding="async"
+          />
         </div>
       </section>
 
@@ -173,15 +180,6 @@ export function Landing() {
             <dd>
               The speech model, the first time you transcribe, and the render engine, the first
               time you export. Both are cached, so it happens once. Downloads, not uploads.
-            </dd>
-          </div>
-          <div>
-            <dt>The exception, stated plainly</dt>
-            <dd>
-              The editor can hand a render to the server running this site, which is roughly twice
-              as fast. That does upload the video, it is an explicit choice in the export dialog,
-              and the{' '}
-              <Link to="/privacy">privacy policy</Link> says exactly what is kept and for how long.
             </dd>
           </div>
         </dl>

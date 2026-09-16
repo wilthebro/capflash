@@ -51,11 +51,37 @@ export interface Segment {
   box?: Box;
 }
 
+/**
+ * The metrics libass normalises a face's drawn size by.
+ *
+ * libass does NOT treat the ASS `Fontsize` as an em size. It scales the face so
+ * that its OS/2 `usWinAscent + usWinDescent` equals `Fontsize`, where a browser
+ * makes CSS `font-size` the em size directly. On Montserrat (win 1562 per 1000
+ * upm) the same number therefore draws ~36% smaller in the export than in the
+ * preview — and by a different amount for every face, so this cannot be a
+ * constant. `assFontSize()` in ass.ts converts between the two.
+ *
+ * Measured against libass on two faces chosen for different win metrics:
+ * Montserrat ExtraBold (1562) and Bebas Neue (1300). Both matched the formula
+ * to within 0.6%. Montserrat also sets OS/2 `USE_TYPO_METRICS`, which libass
+ * ignores — it is the win pair either way, so there is no branch to make here.
+ */
+export interface FontMetrics {
+  unitsPerEm: number;
+  winAscent: number;
+  winDescent: number;
+}
+
 /** A font known to the editor; uploaded fonts carry their bytes. */
 export interface FontRecord {
   family: string;
   fileName: string;
   dataBase64?: string; // present for uploaded fonts
+  /**
+   * Absent when the face could not be parsed (or has no usable OS/2 table), in
+   * which case the size is passed through unconverted rather than guessed at.
+   */
+  metrics?: FontMetrics;
 }
 
 export interface VideoMeta {

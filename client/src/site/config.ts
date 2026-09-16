@@ -14,6 +14,8 @@
  *   grep -rn "\[Product Name\]\|example\." client/
  */
 
+import heroImage from '../assets/hero.webp';
+
 /**
  * Where every "Open the editor" button points.
  *
@@ -31,15 +33,31 @@ export interface NavLink {
 
 export const site = {
   /** Used in the header, the footer, the page titles and the JSON-LD. */
-  name: '[Product Name]',
+  name: 'CapFlash',
   /** One line, used as the footer blurb and the OG description fallback. */
   tagline: 'Free TikTok-style captions, generated in your browser.',
+
+  /**
+   * The landing page's hero image.
+   *
+   * To change the picture, replace `client/src/assets/hero.webp` — the import at
+   * the top of this file picks the new file up on the next build, fingerprint and
+   * all. To use a different filename or format, point that import at it; to use
+   * an image hosted somewhere else, drop the import and put the URL in `src`.
+   *
+   * `alt` is what a screen reader reads in place of the picture, so it should say
+   * what the image shows rather than repeat the heading above it.
+   */
+  heroImage: {
+    src: heroImage,
+    alt: 'The caption editor with word-by-word captions styled over a vertical video',
+  },
 
   appUrl: APP_URL,
 
   contactEmail: 'hello@example.com',
-  companyName: '[Your Company]',
-  jurisdiction: '[State, Country]',
+  companyName: 'CapFlash',
+  jurisdiction: 'Canada',
   /** Where the site is published — the canonical origin and the sitemap base. */
   siteOrigin: 'https://example.com',
   effectiveDate: 'September 15, 2026',

@@ -56,6 +56,16 @@ const FontRecordSchema = z.object({
   family: z.string().min(1),
   fileName: z.string().min(1),
   dataBase64: z.string().optional(),
+  // Read off the font file by the client at export time. Optional because a
+  // face that cannot be parsed has none — the ASS size is then left as-is
+  // rather than corrected with invented numbers. See FontMetrics.
+  metrics: z
+    .object({
+      unitsPerEm: z.number().positive(),
+      winAscent: z.number().nonnegative(),
+      winDescent: z.number().nonnegative(),
+    })
+    .optional(),
 });
 
 const VideoMetaSchema = z.object({

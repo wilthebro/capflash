@@ -18,13 +18,15 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         { src: '../node_modules/onnxruntime-web/dist/*', dest: 'ort' },
-        // The browser export's ffmpeg core, for the same reason: the library
-        // defaults these to a CDN, and its worker must be same-origin with the
-        // page. `worker.js` is @ffmpeg/ffmpeg's own worker (not the core's) and
-        // is passed as an absolute `classWorkerURL`; it imports ./const.js and
-        // ./errors.js, so they have to sit beside it.
-        { src: '../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js', dest: 'ffmpeg' },
-        { src: '../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm', dest: 'ffmpeg' },
+        // Only ffmpeg's worker, not its core. `worker.js` is @ffmpeg/ffmpeg's
+        // own worker (not the core's) and is passed as an absolute
+        // `classWorkerURL`; it imports ./const.js and ./errors.js, so all three
+        // have to sit beside each other, same-origin with the page.
+        //
+        // The core — ffmpeg-core.js and its 30.74 MiB wasm — used to be copied
+        // here too, and cannot be: Cloudflare Pages rejects any asset over
+        // 25 MiB. It is loaded from jsDelivr instead, by URL, in
+        // src/lib/render/browserRender.ts. Do not add it back.
         { src: '../node_modules/@ffmpeg/ffmpeg/dist/esm/worker.js', dest: 'ffmpeg' },
         { src: '../node_modules/@ffmpeg/ffmpeg/dist/esm/const.js', dest: 'ffmpeg' },
         { src: '../node_modules/@ffmpeg/ffmpeg/dist/esm/errors.js', dest: 'ffmpeg' },

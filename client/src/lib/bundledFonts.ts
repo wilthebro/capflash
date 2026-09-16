@@ -1,5 +1,6 @@
+import opentype from 'opentype.js';
 import type { FontRecord } from '@captioner/shared';
-import { arrayBufferToBase64 } from './fonts';
+import { arrayBufferToBase64, fontMetricsOf } from './fonts';
 import regularUrl from '../assets/fonts/Montserrat-Regular.ttf?url';
 import extraBoldUrl from '../assets/fonts/Montserrat-ExtraBold.ttf?url';
 
@@ -31,7 +32,20 @@ async function load(): Promise<void> {
       const face = new FontFace(spec.family, buf, { weight: String(spec.weight) });
       await face.load();
       document.fonts.add(face);
-      return { family: spec.family, fileName: spec.fileName, dataBase64: arrayBufferToBase64(buf) };
+      // The export's px -> ASS-Fontsize fixup needs these; a parse failure must
+      // not cost us the font itself, so it degrades to "no correction".
+      let metrics;
+      try {
+        metrics = fontMetricsOf(opentype.parse(buf));
+      } catch {
+        metrics = undefined;
+      }
+      return {
+        family: spec.family,
+        fileName: spec.fileName,
+        dataBase64: arrayBufferToBase64(buf),
+        metrics,
+      };
     }),
   );
   records.push(...loaded);

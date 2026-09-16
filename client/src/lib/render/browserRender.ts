@@ -2,11 +2,23 @@ import { generateAss, type RenderSpec } from '@captioner/shared';
 import { resolveFonts } from './fontFiles';
 
 /**
- * Self-hosted ffmpeg.wasm, copied out of node_modules by vite.config.ts for the
- * same reason ONNX Runtime is: the library's defaults point at a CDN, and the
- * core's worker has to be same-origin with the page.
+ * The ffmpeg.wasm worker is self-hosted; the core it loads is not.
+ *
+ * They came apart for the deploy: Cloudflare Pages refuses any single asset
+ * over 25 MiB and the core's wasm is 30.74 MiB, so it cannot be served from
+ * this domain at all. The worker has to stay here — the library is handed an
+ * absolute `classWorkerURL`, and the worker imports ./const.js and ./errors.js
+ * from beside itself — but the core is only ever fetched by URL, so it can live
+ * anywhere that allows the worker's cross-origin `importScripts`. jsDelivr
+ * sends `Access-Control-Allow-Origin: *`, which is what that needs.
+ *
+ * Pinned to the exact version in package-lock.json rather than a range: the
+ * worker and the core are two halves of one ABI, and letting either drift
+ * breaks the pair in a way that only shows up at export time.
  */
-const CORE_BASE = '/ffmpeg';
+const WORKER_BASE = '/ffmpeg';
+const CORE_VERSION = '0.12.10';
+const CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/esm`;
 const FONTS_DIR = '/fonts';
 const ASS_PATH = '/captions.ass';
 const INPUT_DIR = '/input';
@@ -40,11 +52,11 @@ async function getFfmpeg(): Promise<import('@ffmpeg/ffmpeg').FFmpeg> {
       ffmpeg.on('progress', ({ progress }) => onProgress?.(Math.min(1, Math.max(0, progress))));
       const origin = window.location.origin;
       await ffmpeg.load({
-        coreURL: `${origin}${CORE_BASE}/ffmpeg-core.js`,
-        wasmURL: `${origin}${CORE_BASE}/ffmpeg-core.wasm`,
+        coreURL: `${CORE_BASE}/ffmpeg-core.js`,
+        wasmURL: `${CORE_BASE}/ffmpeg-core.wasm`,
         // Must be absolute: the library resolves it against import.meta.url,
         // which inside a bundle is a build-time file:/// path.
-        classWorkerURL: `${origin}${CORE_BASE}/worker.js`,
+        classWorkerURL: `${origin}${WORKER_BASE}/worker.js`,
       });
       loadedOnce = true;
       return ffmpeg;

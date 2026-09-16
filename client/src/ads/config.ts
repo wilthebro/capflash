@@ -24,5 +24,16 @@ export const AD_PROVIDER: AdProvider = houseProvider;
  */
 export const AD_MIN_DISPLAY_MS = 30_000;
 
-/** Set false to drop the rail entirely (the column is also hidden on narrow windows). */
-export const ADS_ENABLED = true;
+/**
+ * Set false to drop the rail entirely (the column is also hidden on narrow
+ * windows — index.css:593).
+ *
+ * Off while the site goes through AdSense review. The only thing the rail can
+ * show until then is a house ad, and one of those creatives announces itself as
+ * a placeholder slot — an unfinished-site signal, which is a common rejection
+ * reason. The house creatives are still worth keeping for local development.
+ *
+ * To go live: fill in `ADSENSE` above, point `AD_PROVIDER` at `adsenseProvider`,
+ * and set this back to true.
+ */
+export const ADS_ENABLED = false;

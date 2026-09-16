@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assFontSize,
   assOutlineUnits,
   assTimestamp,
   escapeAssText,
@@ -277,5 +278,36 @@ describe('generateAss with paging', () => {
     // edge on the box's right edge — the same place the preview puts the line.
     expect(left).toContain('{\\pos(100,1400)\\an7}hello');
     expect(right).toContain('{\\pos(500,1400)\\an9}hello');
+  });
+});
+
+describe('assFontSize', () => {
+  // The metrics libass actually normalises by, read off the bundled fonts.
+  // Both are OS/2 win pairs; Montserrat also sets USE_TYPO_METRICS, which
+  // libass ignores, so these are the numbers that matter either way.
+  const MONTSERRAT = { unitsPerEm: 1000, winAscent: 1109, winDescent: 453 };
+  const BEBAS = { unitsPerEm: 1000, winAscent: 1000, winDescent: 300 };
+
+  it('scales by the face win metrics so libass draws the CSS em size', () => {
+    // 1109+453 = 1562 per 1000 upm. A raw 64 drew at 64/1.562 = 41px, which is
+    // the preview/export mismatch this exists to undo.
+    expect(assFontSize(64, MONTSERRAT)).toBeCloseTo(99.97, 2);
+    expect(assFontSize(120, MONTSERRAT)).toBeCloseTo(187.44, 2);
+  });
+
+  it('uses a different factor per face', () => {
+    // Why this cannot be a constant: Bebas needs 1.30 where Montserrat needs
+    // 1.562, so one hardcoded multiplier would fix one font and break the next.
+    expect(assFontSize(120, BEBAS)).toBeCloseTo(156, 6);
+    expect(assFontSize(120, MONTSERRAT)).not.toBeCloseTo(assFontSize(120, BEBAS), 1);
+  });
+
+  it('passes the size through when metrics are absent', () => {
+    expect(assFontSize(64, undefined)).toBe(64);
+  });
+
+  it('passes the size through rather than dividing by zero', () => {
+    expect(assFontSize(64, { unitsPerEm: 0, winAscent: 1000, winDescent: 300 })).toBe(64);
+    expect(assFontSize(64, { unitsPerEm: 1000, winAscent: 0, winDescent: 0 })).toBe(64);
   });
 });

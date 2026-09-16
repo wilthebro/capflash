@@ -39,9 +39,8 @@ export function Terms() {
         <h2>2. What the service is</h2>
         <p>
           {site.name} is a browser-based caption editor. It transcribes speech, lets you style and
-          time captions, and exports a video with those captions burned into the picture. The
-          processing normally happens entirely on your own device; an optional server-side render is
-          described in our <Link to="/privacy">privacy policy</Link>.
+          time captions, and exports a video with those captions burned into the picture. All of
+          that processing happens on your own device, in your browser; nothing is sent to us.
         </p>
         <p>
           There are no accounts and no fees. We may change, suspend or discontinue any part of the
@@ -52,9 +51,7 @@ export function Terms() {
         <h2>3. Your content</h2>
         <p>
           You keep all rights to the videos you load, the transcripts and captions you create, and
-          the videos you export. We claim no licence over any of it, because in the ordinary course
-          of using the service we never receive it. If you use the optional server-side render, you
-          grant us only the permission needed to process that upload and return the result to you.
+          the videos you export. We claim no licence over any of it, because we never receive it.
         </p>
         <p>
           You are responsible for having the rights you need to the material you caption, and for
@@ -65,9 +62,6 @@ export function Terms() {
         <p>You agree not to:</p>
         <ul>
           <li>Use the service for anything unlawful, or to infringe anyone's rights.</li>
-          <li>
-            Use the optional server-side render to upload material you have no right to upload.
-          </li>
           <li>
             Attempt to disrupt or overload the service, or to access parts of it you are not
             authorised to use.

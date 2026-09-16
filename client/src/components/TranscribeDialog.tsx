@@ -98,6 +98,8 @@ export function TranscribeDialog({ open, onClose }: Props) {
       <div className="modal">
         <h2 className="modal-title">Transcribe audio</h2>
 
+        <p> Use a smaller model if it takes too long.</p>
+
         <p className="panel-hint transcribe-capability">
           {capabilities ? capabilities.statusLine : 'Checking what this browser can run…'}
           {capabilities?.note && <span className="transcribe-note"> {capabilities.note}</span>}

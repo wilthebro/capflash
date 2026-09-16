@@ -64,42 +64,62 @@ editor **and** the whole marketing site follow, because
 `client/public/favicon.svg` is the one exception — it has hex values baked in,
 because an SVG file cannot read a CSS variable. Update it by hand if you recolour.
 
-## 5. Carousel images
+## 5. The hero image
 
-The hero cycles through every image in **`client/src/assets/carousel/`**. Create
-the folder and drop files in — there is no list to maintain:
+One image, on the landing page. Two files are involved:
 
-```
-client/src/assets/carousel/
-  01-word-by-word.webp
-  02-line-by-line.webp
-  03-highlight-mode.webp
-```
+| What | Where |
+|---|---|
+| The picture | `client/src/assets/hero.webp` |
+| The path and the alt text | `heroImage` in `client/src/site/config.ts` |
 
-- **Order is the filename**, sorted alphabetically — hence the numeric prefixes.
-- **The filename becomes the alt text** for screen readers:
-  `01-word-by-word.webp` → "Word by word". Name the files descriptively and
-  accessibility comes for free.
-- **Formats**: `.webp`, `.png`, `.jpg`, `.jpeg`, `.avif`. WebP is the best size
-  for the quality.
-- **Size**: aim for roughly 700×1200 (portrait, 9:15) and under ~200 KB each.
-  Anything that is not that shape is letterboxed rather than cropped.
-- **Until the folder has images**, the hero shows the CSS illustration that
-  shipped with the page, so nothing is ever broken or blank.
+**To change the picture, replace the file.** Keep the name `hero.webp` and
+nothing else has to move — `config.ts` imports it, so Vite fingerprints the new
+bytes and no cache needs clearing. To use a different filename or format
+(`.png`, `.jpg`, `.jpeg`, `.avif` all work), point the import at the top of
+`config.ts` at it. To use an image hosted somewhere else, drop that import and
+put the URL straight into `src`.
 
-Only the first image loads eagerly; the rest load lazily. The carousel pauses on
-hover, on keyboard focus, and in a background tab, and does not auto-advance at
-all for anyone whose system asks for reduced motion.
+- **Alt text** is the one string to edit in `config.ts`. It is what a screen
+  reader reads in place of the picture, so describe what the image shows rather
+  than repeating the heading above it.
+- **Size**: aim for 700×1200 (portrait, 9:15) and under ~200 KB. At exactly that
+  shape the image fills the frame edge to edge; anything else is letterboxed
+  against the frame's own background rather than cropped.
+- **Weight matters more here than anywhere else on the site.** It sits above the
+  fold and loads eagerly at high priority, so it is almost certainly the page's
+  LCP element.
+
+Until you replace it, the file is a placeholder that prints its own dimensions in
+the hero.
 
 ## 6. Deploy
 
-```powershell
-npm run build     # → client/dist
-npm start         # Express serves client/dist on PORT (default 3001)
-```
+Target is **Cloudflare Pages**, static and Git-connected:
 
-Deep links work: `server/src/app.ts` falls back to `index.html` for any path that
-is not `/api/`.
+| Setting | Value |
+|---|---|
+| Root directory | the repo root — `client` resolves `@captioner/shared: "*"` through the workspace |
+| Build command | `npm run build` |
+| Output directory | `client/dist` |
+| `NODE_VERSION` | `22` — nothing pins it, so the build otherwise tracks Cloudflare's default |
+
+Deep links work through `client/public/_redirects`, which names the app's routes
+explicitly. It is deliberately **not** a `/*` catch-all: Cloudflare's docs say
+redirects are followed even when a static asset matches, so a catch-all would
+rewrite `/assets/*.js` to HTML and break the app with a MIME-type error.
+
+**25 MiB is a hard per-file ceiling.** Pages refuses any single asset over it,
+which is why the ffmpeg core is fetched from jsDelivr instead of built into
+`dist/` — its wasm is 30.74 MiB. `client/vite.config.ts` copies only ffmpeg's
+worker; adding the core back will make the deploy fail. The onnxruntime assets
+stay self-hosted, because ORT builds its threading workers from cross-origin URLs
+that browsers refuse to construct. Note `ort-wasm-simd-threaded.jsep.wasm` sits at
+24.89 MiB, 0.11 MiB under the ceiling — check it after any dependency bump.
+
+**The server is not deployed**, so `/api/*` does not exist and the faster
+server-side render can never run. The site's copy is written for that. `npm start`
+still serves `client/dist` from Express wherever Node is available.
 
 For AdSense, follow the four steps in the README's "Ad rail" section — the loader
 snippet goes in `client/index.html`, where a placeholder comment is waiting.
@@ -112,17 +132,18 @@ landing page is currently a strong SEO asset for Google and a blank page to that
 crawler. The fix is a prerender pass over the built `dist/`, rendering each route
 to static HTML.
 
-Note for whoever does it: `client/src/site/carousel.ts` uses `import.meta.glob`,
-which is a Vite build-time macro. A prerender step therefore has to run through
-Vite (an SSR build), not a standalone `tsx` script.
+Note for whoever does it: `client/src/site/config.ts` pulls the hero image in
+through Vite (`import heroImage from '../assets/hero.webp'`), and that only
+resolves inside a Vite build. A prerender step therefore has to run through Vite
+(an SSR build), not a standalone `tsx` script.
 
-**"No upload" is true by default, not always.** The in-browser renderer is the
-default path and nothing leaves the machine. But
-`client/src/components/ExportDialog.tsx` falls back to uploading the video to the
-server if that renderer fails to start, and nothing in `server/` deletes job
-directories afterwards. The site's copy and the privacy policy both disclose
-this. Requiring a click for that fallback, and deleting job directories after
-download, would make the claim unconditional.
+**"No upload" holds because the server is not deployed.** With no `/api`, the
+health check fails, the server render is never offered, and the silent upload
+fallback in `client/src/components/ExportDialog.tsx` cannot fire — the claim is
+unconditional by construction. Put `server/` behind the same domain and that
+stops being true: the fallback uploads without asking, and nothing in `server/`
+deletes job directories afterwards. Requiring a click for the fallback, and
+deleting job directories after download, would make the claim hold either way.
 
 ---
 

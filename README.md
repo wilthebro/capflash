@@ -1,6 +1,6 @@
 # Captioner
 
-TikTok-style caption editor. Upload a video, get word-level timings (load a transcript JSON, or transcribe the audio in your own browser with Whisper), then design captions — word-by-word or line-by-line with a highlighted spoken word — in a draggable bounding box with full text styling, position them on a caption timeline, and export a burned-in MP4.
+TikTok-style caption editor. Upload a video, get word-level timings by transcribing the audio in your own browser with Whisper, then design captions — word-by-word or line-by-line with a highlighted spoken word — in a draggable bounding box with full text styling, position them on a caption timeline, and export a burned-in MP4.
 
 ## Run it
 
@@ -16,12 +16,8 @@ Requirements: Node 18+. Export runs in the browser by default and needs nothing 
 ## Workflow
 
 1. **Load video** — any browser-playable format.
-2. **Get a transcript** — either:
-   - **Load transcript** — a JSON array of word timestamps:
-     ```json
-     [{ "text": "Imagine", "start": 0.07, "end": 0.42 }, { "text": "you", "start": 0.42, "end": 0.6 }]
-     ```
-   - **Transcribe** — speech-to-text on your own machine (see below). The result can also be downloaded as JSON to reuse elsewhere.
+2. **Get a transcript** — **Transcribe**: speech-to-text on your own machine (see below). The
+   result can also be downloaded as JSON, as a record of the run.
 
    Words are auto-grouped into caption segments at sentence boundaries.
 3. **Fix up the words (optional)** — **Edit transcript** opens the word list for editing: correct a misheard word, nudge a timing, add a word the recognizer dropped, delete a stray one. Captions are regrouped around your edits; each segment keeps its own style and bounding box.

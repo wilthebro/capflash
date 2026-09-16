@@ -111,7 +111,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: 'Do I have to upload my video to use the caption generator?',
-    a: 'No. By default nothing is uploaded: your browser opens the file, transcribes it on your device and renders the captions there. The one exception is the optional server-side export, which sends the video to the server running the app — it is used when you pick it for speed, and as a fallback if the in-browser renderer cannot start, which the export dialog tells you when it happens.',
+    a: 'No. Your browser opens the file, transcribes it on your device and renders the captions there, so nothing is uploaded at any point.',
   },
   {
     q: 'Is there a watermark on the export?',

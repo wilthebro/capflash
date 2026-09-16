@@ -14,7 +14,7 @@ import { useDocumentMeta } from '../site/meta';
 
 const TITLE = 'Privacy policy';
 const DESCRIPTION =
-  'What this caption editor stores, what it downloads, and the one case where your video is uploaded — in plain language.';
+  'What this caption editor stores, what it downloads, and why your video never leaves your device — in plain language.';
 
 export function Privacy() {
   useDocumentMeta({
@@ -30,9 +30,8 @@ export function Privacy() {
 
         <p className="site-callout">
           <strong>The short version.</strong> There is no account and no tracking. Your video is
-          processed on your own device and is not uploaded, with one exception you have to ask for:
-          the optional server-side export, described below. We do not sell anything about you
-          because we do not collect anything about you.
+          processed on your own device and is never uploaded — there is nowhere for it to go. We do
+          not sell anything about you because we do not collect anything about you.
         </p>
 
         <h2>Who this covers</h2>
@@ -44,9 +43,9 @@ export function Privacy() {
 
         <h2>Your video is processed on your device</h2>
         <p>
-          By default, nothing about your video leaves your computer. The file is opened directly by
-          your browser and held in memory; it is not sent to us, and there is no copy of it on our
-          servers. Two things happen locally:
+          Nothing about your video leaves your computer. The file is opened directly by your browser
+          and held in memory; it is not sent to us, and there is no copy of it on our servers. Two
+          things happen locally:
         </p>
         <ul>
           <li>
@@ -59,22 +58,6 @@ export function Privacy() {
             there and saved straight to your disk.
           </li>
         </ul>
-
-        <h2>The one case where a video is uploaded</h2>
-        <p>
-          The editor can hand a render to the server running this site, which is roughly twice as
-          fast as rendering in the page. When that happens, your video <em>is</em> uploaded, along
-          with the caption data needed to render it. This is used when you choose it in the export
-          dialog, and as a fallback if the in-browser renderer cannot start — the dialog tells you
-          when that happens.
-        </p>
-        <p>
-          Uploaded videos are written to the server's job directory so the render can run, and the
-          finished MP4 is served back to you from there. They are not analysed, shared or used for
-          anything else. Note that job files are not currently deleted on a timer; if you need a
-          specific upload removed, email{' '}
-          <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> and it will be deleted.
-        </p>
 
         <h2>What is stored on your device</h2>
         <p>
@@ -97,8 +80,11 @@ export function Privacy() {
             request reveals it.
           </li>
           <li>
-            <strong>Rendering engine and runtime</strong> — served from this site's own domain. No
-            third party is involved.
+            <strong>Rendering engine</strong> — the ffmpeg build that burns your captions in is
+            fetched from jsDelivr, a public content delivery network, the first time you export.
+            That request is made by your browser to their servers, so their own privacy policy
+            applies to it and your IP address is visible to them in the ordinary way. Your video is
+            not part of it — the download goes one way.
           </li>
         </ul>
 
@@ -132,17 +118,15 @@ export function Privacy() {
         <h2>Children</h2>
         <p>
           This service is not directed at children under 13, and we do not knowingly collect
-          personal information from them. Since we collect no personal information at all, there is
-          nothing for a parent to request the deletion of — other than an uploaded video, which the
-          address above can remove.
+          personal information from them. Since we collect no personal information at all — and no
+          video ever reaches us — there is nothing for a parent to request the deletion of.
         </p>
 
         <h2>Your rights</h2>
         <p>
           Data protection law gives you rights of access, correction, deletion and portability over
           personal data held about you. We hold none, so in practice there is nothing to exercise
-          them against. If you have uploaded a video through the server-side export and want it
-          gone, contact us and we will delete it.
+          them against.
         </p>
 
         <h2>Changes</h2>
@@ -154,7 +138,7 @@ export function Privacy() {
 
         <h2>Contact</h2>
         <p>
-          Questions about any of this, or a deletion request, go to{' '}
+          Questions about any of this go to{' '}
           <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>. See also our{' '}
           <Link to="/terms">terms of use</Link>.
         </p>

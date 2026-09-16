@@ -50,7 +50,6 @@
   --site-line: var(--border);
   --site-panel: var(--bg-panel);
   --site-panel-2: var(--bg-panel-2);
-  --site-mock-glow: rgba(91, 140, 255, 0.2);
   --site-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 
   /* The app chrome face, so the site reads as the same product. */
@@ -302,177 +301,20 @@ a.site-button-ghost:hover {
   justify-content: center;
 }
 
-.site-mock {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 16px;
+/* The hero picture. The frame's aspect-ratio reserves the space before the
+   file arrives, so nothing shifts; `contain` rather than `cover` letterboxes
+   an image that is not exactly 9:15 against the frame's own background
+   instead of cropping it. At the recommended 700x1200 it fills edge to edge. */
+.site-hero-image {
+  display: block;
   width: 100%;
   max-width: 330px;
   aspect-ratio: 9 / 15;
-  padding: 20px;
-  border: 1px solid var(--site-line);
-  border-radius: 20px;
-  background:
-    radial-gradient(120% 80% at 25% 0%, var(--site-mock-glow), transparent 62%),
-    linear-gradient(165deg, var(--site-panel-2), var(--bg-input));
-  box-shadow: var(--site-shadow);
-}
-
-.site-mock-box {
-  padding: 14px 12px;
-  border: 1px dashed var(--site-line);
-  border-radius: 8px;
-  text-align: center;
-}
-
-.site-mock-line {
-  margin: 0;
-  font-family: var(--site-font-display);
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-}
-
-.site-mock-word {
-  color: var(--site-text);
-}
-
-/* The spoken word, as the editor draws it: recoloured and about 10% larger. */
-.site-mock-active {
-  color: var(--site-cta-bg);
-  font-size: 1.1em;
-}
-
-.site-mock-timeline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 24px;
-}
-
-.site-mock-clip {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--site-line);
-}
-
-.site-mock-clip-alt {
-  flex: 1.4;
-  background: var(--site-link);
-}
-
-/* ---------- hero carousel ----------
-   Takes over the hero slot from .site-mock once there are images in
-   src/assets/carousel/. Crossfade rather than a sliding track: no layout shift,
-   nothing to overflow at narrow widths, and no transform maths to get wrong. */
-
-.site-carousel {
-  width: 100%;
-  max-width: 330px;
-}
-
-.site-carousel-frame {
-  position: relative;
-  aspect-ratio: 9 / 15;
-  overflow: hidden;
+  object-fit: contain;
   border: 1px solid var(--site-line);
   border-radius: 20px;
   background: linear-gradient(165deg, var(--site-panel-2), var(--bg-input));
   box-shadow: var(--site-shadow);
-}
-
-.site-carousel-slide {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 320ms ease;
-}
-
-.site-carousel-slide.is-active {
-  opacity: 1;
-}
-
-/* contain, not cover: a screenshot that is not exactly 9:15 is letterboxed
-   against the frame's own background rather than cropped. */
-.site-carousel-slide img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.site-carousel-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.site-carousel-dots {
-  display: flex;
-  gap: 2px;
-}
-
-/* 24px hit area with an 8px dot drawn inside it — the visual size is what it
-   should be, the target is what a thumb can actually hit. */
-.site-carousel-dot {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-.site-carousel-dot::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--site-line);
-  transform: translate(-50%, -50%);
-  transition: background-color 120ms ease;
-}
-
-.site-carousel-dot:hover::before {
-  background: var(--site-dim);
-}
-
-.site-carousel-dot.is-active::before {
-  background: var(--site-cta-bg);
-}
-
-.site-carousel-toggle {
-  padding: 4px 10px;
-  border: 1px solid var(--site-line);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--site-dim);
-  font-family: var(--site-font-body);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.site-carousel-toggle:hover {
-  border-color: var(--site-link);
-  color: var(--site-link);
-}
-
-/* Instantly rather than fading, for the same reason the carousel does not
-   advance on its own under this setting. */
-@media (prefers-reduced-motion: reduce) {
-  .site-carousel-slide {
-    transition: none;
-  }
 }
 
 /* ---------- badges ---------- */
@@ -952,9 +794,5 @@ a.site-button-ghost:hover {
 
   .site-button-lg {
     width: 100%;
-  }
-
-  .site-mock-line {
-    font-size: 19px;
   }
 }

@@ -1,5 +1,21 @@
 import opentype from 'opentype.js';
-import type { FontRecord } from '@captioner/shared';
+import type { FontMetrics, FontRecord } from '@captioner/shared';
+
+/**
+ * The metrics libass normalises a face's drawn size by, read off the file we
+ * are about to hand it. Undefined when the OS/2 table is missing or unusable,
+ * which leaves the ASS size unconverted rather than guessed at.
+ * See FontMetrics in shared/src/types.ts for why this is needed at all.
+ */
+export function fontMetricsOf(font: opentype.Font): FontMetrics | undefined {
+  const os2 = font.tables.os2 as { usWinAscent?: unknown; usWinDescent?: unknown } | undefined;
+  const unitsPerEm = font.unitsPerEm;
+  if (!os2 || !(unitsPerEm > 0)) return undefined;
+  const { usWinAscent, usWinDescent } = os2;
+  if (typeof usWinAscent !== 'number' || typeof usWinDescent !== 'number') return undefined;
+  if (usWinAscent + usWinDescent <= 0) return undefined;
+  return { unitsPerEm, winAscent: usWinAscent, winDescent: usWinDescent };
+}
 
 /** Curated fallback list — always available, covers the common caption fonts. */
 export const FALLBACK_FONTS = [
@@ -62,7 +78,12 @@ export async function loadFontFile(file: File): Promise<FontRecord> {
   const face = new FontFace(family, buf);
   await face.load();
   document.fonts.add(face);
-  return { family, fileName: file.name, dataBase64: arrayBufferToBase64(buf) };
+  return {
+    family,
+    fileName: file.name,
+    dataBase64: arrayBufferToBase64(buf),
+    metrics: fontMetricsOf(font),
+  };
 }
 
 /** Re-register a font from a saved project's embedded bytes. */

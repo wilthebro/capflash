@@ -2,7 +2,11 @@ import { create } from 'zustand';
 import {
   DEFAULT_BOX,
   DEFAULT_STYLE,
+  defaultBoxFor,
+  defaultFontSizeFor,
   defaultId,
+  fitBoxToVideo,
+  LINE_HEIGHT,
   reassignSegments,
   segmentsFromScript,
   splitTranscript,
@@ -58,8 +62,13 @@ interface EditorState {
   scriptText: string;
 
   loadVideo(file: File): Promise<void>;
+  /**
+   * No longer reachable from the UI: the toolbar's "Load transcript" button was
+   * removed, on the grounds that no third party exports this format. Kept so the
+   * capability survives — if a real importer is ever wanted, this is it.
+   */
   loadTranscript(raw: unknown): string[];
-  /** Replace the transcript wholesale (Whisper results, JSON import). */
+  /** Replace the transcript wholesale (Whisper results). */
   commitTranscript(words: Word[]): string[];
   /** Re-derive segments after the transcript editor changed words. */
   applyTranscriptEdit(nextWords: Word[]): string[];
@@ -126,6 +135,12 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       videoFile: file,
       videoUrl: url,
       videoMeta: meta,
+      // The shipped defaults are absolute pixels designed against 1080x1920, so
+      // they are re-derived for this video rather than carried over — on a
+      // smaller frame the stock values put every caption outside it. A new video
+      // means a new default box and default text size.
+      defaultBox: defaultBoxFor(meta),
+      defaultStyle: { ...s.defaultStyle, fontSize: defaultFontSizeFor(meta) },
       playhead: 0,
       isPlaying: false,
       projectName: s.projectName === 'Untitled' ? file.name.replace(/\.[^.]+$/, '') : s.projectName,
@@ -199,7 +214,15 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   updateSegment: (id, patch) =>
     set((s) => ({
-      segments: s.segments.map((seg) => (seg.id === id ? { ...seg, ...patch } : seg)),
+      segments: s.segments.map((seg) => {
+        if (seg.id !== id) return seg;
+        const next = { ...seg, ...patch };
+        // A pinned box is clamped on every write, so a typed or stale value
+        // can't park a caption outside the frame where it can't be dragged back.
+        return next.box && s.videoMeta
+          ? { ...next, box: fitBoxToVideo(next.box, s.videoMeta, next.style.fontSize * LINE_HEIGHT) }
+          : next;
+      }),
     })),
 
   moveSegment: (id, deltaSec) =>
@@ -278,7 +301,15 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     }),
 
   updateDefaultStyle: (patch) => set((s) => ({ defaultStyle: { ...s.defaultStyle, ...patch } })),
-  updateDefaultBox: (patch) => set((s) => ({ defaultBox: { ...s.defaultBox, ...patch } })),
+  updateDefaultBox: (patch) =>
+    set((s) => {
+      const next = { ...s.defaultBox, ...patch };
+      return {
+        defaultBox: s.videoMeta
+          ? fitBoxToVideo(next, s.videoMeta, s.defaultStyle.fontSize * LINE_HEIGHT)
+          : next,
+      };
+    }),
   setDefaultMode: (mode) => set({ defaultMode: mode }),
 
   applyDefaultsToAll: () =>
@@ -336,9 +367,20 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       videoUrl: null,
       videoMeta: p.video,
       words: p.words.map((w) => ({ ...w, text: normalizeWordText(w.text) })),
-      segments: p.segments,
+      // Restored boxes are fitted to the project's own video. A no-op for a box
+      // that was already in frame, and the only way to recover one that was not:
+      // an off-frame box cannot be clicked or dragged, so it would otherwise
+      // stay invisible for good.
+      segments: p.segments.map((seg) =>
+        seg.box && p.video
+          ? { ...seg, box: fitBoxToVideo(seg.box, p.video, seg.style.fontSize * LINE_HEIGHT) }
+          : seg,
+      ),
       defaultStyle: p.defaultStyle,
-      defaultBox: p.defaultBox,
+      defaultBox:
+        p.video
+          ? fitBoxToVideo(p.defaultBox, p.video, p.defaultStyle.fontSize * LINE_HEIGHT)
+          : p.defaultBox,
       defaultMode: p.defaultMode,
       fonts: p.fonts,
       fontsVersion: get().fontsVersion + 1,

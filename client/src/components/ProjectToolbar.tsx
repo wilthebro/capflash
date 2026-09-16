@@ -1,5 +1,6 @@
 import { loadProjectFromFile, saveProjectToFile } from '../lib/project';
 import { Link } from '../lib/router';
+import { site } from '../site/config';
 import { useEditorStore } from '../store/editorStore';
 
 interface Props {
@@ -13,7 +14,6 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript, onHel
   const projectName = useEditorStore((s) => s.projectName);
   const setProjectName = useEditorStore((s) => s.setProjectName);
   const loadVideo = useEditorStore((s) => s.loadVideo);
-  const loadTranscript = useEditorStore((s) => s.loadTranscript);
   const addNotice = useEditorStore((s) => s.addNotice);
   const clearNotices = useEditorStore((s) => s.clearNotices);
   const notices = useEditorStore((s) => s.notices);
@@ -34,20 +34,6 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript, onHel
       addNotice(`Loaded video "${f.name}".`);
     } catch (err) {
       addNotice(`Could not load video: ${errMsg(err)}`);
-    }
-  };
-
-  const onTranscriptFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    try {
-      const raw: unknown = JSON.parse(await f.text());
-      const warnings = loadTranscript(raw);
-      addNotice(`Loaded transcript: ${useEditorStore.getState().words.length} words, ${useEditorStore.getState().segments.length} segments.`);
-      warnings.forEach((w) => addNotice(`⚠ ${w}`));
-    } catch (err) {
-      addNotice(`Could not load transcript: ${errMsg(err)}`);
     }
   };
 
@@ -79,12 +65,19 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript, onHel
     }
   };
 
+  // A mail draft rather than a link to /contact: navigating away would unmount
+  // the editor, and the store is in memory only, so the project would be lost —
+  // the same hazard the app-title link above is written to avoid.
+  const suggestHref = `mailto:${site.contactEmail}?subject=${encodeURIComponent(
+    `${site.name} feature suggestion`,
+  )}`;
+
   return (
     <header className="toolbar">
       {/* A router link, not a bare <a href="/">: the editor's store is in memory
           only, so a full document load here would silently drop the project. */}
       <Link to="/" className="app-title" title="Back to the home page">
-        🎬 Captioner
+        🎬 CapFlash
       </Link>
       <input
         type="text"
@@ -96,15 +89,6 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript, onHel
       <label className="button ghost">
         Load video
         <input type="file" accept="video/*" hidden onChange={(e) => void onVideoFile(e)} />
-      </label>
-      <label className="button ghost">
-        Load transcript
-        <input
-          type="file"
-          accept=".json,application/json"
-          hidden
-          onChange={(e) => void onTranscriptFile(e)}
-        />
       </label>
       <button className="button ghost" onClick={onTranscribe} disabled={!hasVideo} title="Speech-to-text in your browser">
         Transcribe
@@ -139,6 +123,9 @@ export function ProjectToolbar({ onExport, onTranscribe, onEditTranscript, onHel
       <button className="button ghost" onClick={onHelp} title="How to use Captioner">
         Help
       </button>
+      <a className="button ghost" href={suggestHref} title="Tell us what you'd like to see">
+        Suggest features
+      </a>
       {notices.length > 0 && (
         <div className="toasts">
           {notices.map((n, i) => (

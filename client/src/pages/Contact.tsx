@@ -1,4 +1,3 @@
-import { Link } from '../lib/router';
 import { SiteLayout } from '../components/SiteLayout';
 import { site } from '../site/config';
 import { useDocumentMeta } from '../site/meta';
@@ -48,13 +47,6 @@ export function Contact() {
             failing silently, so the message is usually the answer.
           </li>
         </ul>
-
-        <h2>Deleting an uploaded video</h2>
-        <p>
-          If you used the server-side export and want that upload removed, say so and it will be
-          deleted. Include roughly when you used it, since there are no accounts to look you up by.
-          The <Link to="/privacy">privacy policy</Link> explains what is kept and why.
-        </p>
 
         <h2>Feature requests and bugs</h2>
         <p>
