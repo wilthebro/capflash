@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Replace the example.com origin here, in public/robots.txt and in
-     src/site/config.ts before deploying, and refresh the lastmod dates. -->
+<!-- The origin here cannot be read from src/site/config.ts, so it is repeated.
+     Keep it in step with config.ts and public/robots.txt. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://example.com/</loc>
-    <lastmod>2026-09-15</lastmod>
+    <loc>https://capflash.app/</loc>
+    <lastmod>2026-09-16</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://example.com/app</loc>
-    <lastmod>2026-09-15</lastmod>
+    <loc>https://capflash.app/app</loc>
+    <lastmod>2026-09-16</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://example.com/privacy</loc>
-    <lastmod>2026-09-15</lastmod>
+    <loc>https://capflash.app/privacy</loc>
+    <lastmod>2026-09-16</lastmod>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://example.com/terms</loc>
-    <lastmod>2026-09-15</lastmod>
+    <loc>https://capflash.app/terms</loc>
+    <lastmod>2026-09-16</lastmod>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://example.com/contact</loc>
-    <lastmod>2026-09-15</lastmod>
+    <loc>https://capflash.app/contact</loc>
+    <lastmod>2026-09-16</lastmod>
     <priority>0.3</priority>
   </url>
 </urlset>

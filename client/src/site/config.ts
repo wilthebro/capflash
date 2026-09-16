@@ -55,12 +55,12 @@ export const site = {
 
   appUrl: APP_URL,
 
-  contactEmail: 'hello@example.com',
+  contactEmail: 'support@capflash.app',
   companyName: 'CapFlash',
   jurisdiction: 'Canada',
   /** Where the site is published — the canonical origin and the sitemap base. */
-  siteOrigin: 'https://example.com',
-  effectiveDate: 'September 15, 2026',
+  siteOrigin: 'https://capflash.app',
+  effectiveDate: 'September 16, 2026',
 
   /** Header and footer navigation. Sections use `#` anchors; pages use paths. */
   nav: [

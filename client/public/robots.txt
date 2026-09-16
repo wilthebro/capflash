@@ -1,6 +1,3 @@
-# Replace the example.com origin here, in public/sitemap.xml and in
-# src/site/config.ts before deploying.
-
 User-agent: *
 Allow: /
 Disallow: /api/
@@ -13,4 +10,4 @@ Allow: /
 User-agent: AdsBot-Google
 Allow: /
 
-Sitemap: https://example.com/sitemap.xml
+Sitemap: https://capflash.app/sitemap.xml

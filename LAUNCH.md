@@ -10,11 +10,10 @@ before it goes on a real domain.
 
 ## 1. The product name
 
-Set it once:
+Set once, in `client/src/site/config.ts`:
 
 ```ts
-// client/src/site/config.ts
-name: '[Product Name]',
+name: 'CapFlash',
 ```
 
 That one value drives the header logo, the footer, every page `<title>`, the

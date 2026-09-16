@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>[Product Name] — Free TikTok-style captions, generated in your browser</title>
+    <title>CapFlash — Free TikTok-style captions, generated in your browser</title>
     <meta
       name="description"
       content="Free TikTok-style caption generator that runs entirely in your browser: no upload, no watermark, no account. Transcribe, style and burn captions into an MP4."
@@ -18,31 +18,46 @@
       one index.html serves every route, so a static canonical would mark
       /privacy and /terms as duplicates of this page.
 
-      TODO before launch: replace [Product Name] and the example.com origin
-      here, in src/site/config.ts, and in public/sitemap.xml.
-      There is no og:image yet — it needs a 1200x630 PNG, and pointing at a file
-      that does not exist is worse than having none.
+      The name and origin below are repeated from src/site/config.ts, which this
+      file cannot read. If either changes, change it in both — and in
+      public/sitemap.xml and public/robots.txt, which have the same problem.
+
+      The og:image is public/og-image.png (1200x630), referenced by absolute URL
+      below because scrapers do not resolve relative ones. Swap the file to
+      change it; only the dimensions need to stay 1200x630. Social platforms
+      cache previews hard, so force a re-fetch after changing it.
     -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="[Product Name]" />
+    <meta property="og:site_name" content="CapFlash" />
     <meta
       property="og:title"
-      content="[Product Name] — Free TikTok-style captions, generated in your browser"
+      content="CapFlash — Free TikTok-style captions, generated in your browser"
     />
     <meta
       property="og:description"
       content="Free TikTok-style caption generator that runs entirely in your browser: no upload, no watermark, no account. Transcribe, style and burn captions into an MP4."
     />
-    <meta property="og:url" content="https://example.com/" />
+    <meta property="og:url" content="https://capflash.app/" />
+    <!-- Absolute, not a relative path: scrapers do not resolve relative URLs, and
+         a relative og:image silently produces no preview image at all. This file
+         is public/og-image.png, served from the site root. -->
+    <meta property="og:image" content="https://capflash.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="CapFlash — free TikTok-style captions, generated in your browser"
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="[Product Name] — Free TikTok-style captions, generated in your browser"
+      content="CapFlash — Free TikTok-style captions, generated in your browser"
     />
     <meta
       name="twitter:description"
       content="Free TikTok-style caption generator that runs entirely in your browser: no upload, no watermark, no account."
     />
+    <meta name="twitter:image" content="https://capflash.app/og-image.png" />
 
     <!--
       AdSense site review looks for the loader in the served HTML, so paste the
