@@ -103,10 +103,15 @@ Target is **Cloudflare Pages**, static and Git-connected:
 | Output directory | `client/dist` |
 | `NODE_VERSION` | `22` — nothing pins it, so the build otherwise tracks Cloudflare's default |
 
-Deep links work through `client/public/_redirects`, which names the app's routes
-explicitly. It is deliberately **not** a `/*` catch-all: Cloudflare's docs say
-redirects are followed even when a static asset matches, so a catch-all would
-rewrite `/assets/*.js` to HTML and break the app with a MIME-type error.
+Deep links need **no configuration**. Pages serves `index.html` for any path that
+is not a static asset, so `/privacy`, `/terms` and `/contact` boot the app and its
+router takes over.
+
+**Do not add a `_redirects` file to "fix" this.** One was tried, on the theory that
+Pages would 404 on deep links, and it broke every one of them: a `200` rewrite to
+`/index.html` gets canonicalised into a **308 redirect to `/`**, so `/privacy`
+bounced to the homepage. Omitting the file is both simpler and correct. Verified
+on the live site — routes with a rule 308'd, routes without one served the app.
 
 **25 MiB is a hard per-file ceiling.** Pages refuses any single asset over it,
 which is why the ffmpeg core is fetched from jsDelivr instead of built into
