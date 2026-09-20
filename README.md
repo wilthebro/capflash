@@ -1,8 +1,12 @@
 # Captioner
 
+**Live Site:** **[capflash.app](https://capflash.app/app)**
+
 TikTok-style caption editor. Upload a video, get word-level timings by transcribing the audio in your own browser with Whisper, then design captions — word-by-word or line-by-line with a highlighted spoken word — in a draggable bounding box with full text styling, position them on a caption timeline, and export a burned-in MP4.
 
-## Run it
+## Run it locally
+
+Clone the repo then run
 
 ```powershell
 npm install
